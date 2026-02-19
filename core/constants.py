@@ -18,6 +18,7 @@ MARGIN_TOLERANCE = 0.05  # small tolerance for measurement imprecision
 MIN_FONT_SIZE_PT = 12.0
 MAX_CHARS_PER_INCH = 16
 FONT_SIZE_TOLERANCE = 0.3  # pt tolerance for font size detection
+FONT_NONCOMPLIANT_THRESHOLD = 10  # chars per page: >= this count is REJECT, below is NOTE
 
 # --- Spacing ---
 # Double spacing is ~24pt between baselines for 12pt text.

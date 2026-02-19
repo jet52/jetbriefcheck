@@ -218,7 +218,7 @@ header .subtitle { color: #586069; font-size: 0.95rem; }
 .severity-correction { background: #fff8c5; color: #735c0f; }
 .severity-note { background: #f1f1f1; color: #586069; }
 .check-msg { margin-top: 0.4rem; font-size: 0.93rem; }
-.detail { margin-top: 0.3rem; font-size: 0.85rem; color: #586069; }
+.detail { margin-top: 0.3rem; font-size: 0.85rem; color: #586069; white-space: pre-line; }
 .checks-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .checks-table th, .checks-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #e1e4e8; text-align: left; }
 .checks-table th { background: #f6f8fa; font-weight: 600; }

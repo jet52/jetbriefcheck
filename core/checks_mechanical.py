@@ -11,6 +11,7 @@ import statistics
 from collections import Counter
 
 from core.constants import (
+    FONT_NONCOMPLIANT_THRESHOLD,
     MARGIN_TOLERANCE,
     MAX_CHARS_PER_INCH,
     MIN_BOTTOM_MARGIN,
@@ -124,20 +125,7 @@ def _check_fonts(metadata: BriefMetadata) -> list[CheckResult]:
     results = []
 
     # FMT-006: Font size >= 12pt — Rule 32(a)(5): "The typeface must be 12 point or larger"
-    if metadata.min_font_size is not None and metadata.min_font_size < MIN_FONT_SIZE_PT - FONT_SIZE_TOLERANCE:
-        results.append(CheckResult(
-            check_id="FMT-006", name="Minimum Font Size", rule="32(a)(5)",
-            passed=False, severity=Severity.REJECT,
-            message=f"Font size {metadata.min_font_size:.1f}pt found; minimum is {MIN_FONT_SIZE_PT}pt.",
-            details=f"Predominant font size: {metadata.predominant_font_size}pt. "
-                    f"Smallest detected: {metadata.min_font_size:.1f}pt.",
-        ))
-    else:
-        results.append(CheckResult(
-            check_id="FMT-006", name="Minimum Font Size", rule="32(a)(5)",
-            passed=True, severity=Severity.REJECT,
-            message=f"Font size meets the {MIN_FONT_SIZE_PT}pt minimum.",
-        ))
+    results.append(_check_font_size_per_page(metadata))
 
     # FMT-007: Max 16 characters per inch — Rule 32(a)(5): "no more than 16 characters per inch"
     cpi_issues = _check_chars_per_inch(metadata)
@@ -172,6 +160,128 @@ def _check_fonts(metadata: BriefMetadata) -> list[CheckResult]:
         ))
 
     return results
+
+
+def _classify_font_span(font: dict, page_height_pts: float) -> str:
+    """Classify a font span as 'header_footer', 'superscript', or 'body'.
+
+    - header_footer: origin_y in top or bottom 10% of the page
+    - superscript: PyMuPDF superscript flag (bit 0) set, or <=4 chars of
+      digit-only text at small size (catches footnote markers / ordinal suffixes)
+    - body: everything else
+    """
+    origin_y = font.get("origin_y", page_height_pts / 2)
+    top_zone = page_height_pts * 0.10
+    bottom_zone = page_height_pts * 0.90
+
+    if origin_y <= top_zone or origin_y >= bottom_zone:
+        return "header_footer"
+
+    flags = font.get("flags", 0)
+    is_superscript = bool(flags & 1)  # bit 0
+    if is_superscript:
+        return "superscript"
+
+    # Short digit-only text at small size — likely footnote marker or ordinal
+    chars = font.get("chars", 0)
+    if chars <= 4 and font["size"] < MIN_FONT_SIZE_PT - FONT_SIZE_TOLERANCE:
+        return "superscript"
+
+    return "body"
+
+
+def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
+    """FMT-006: Font size >= 12pt with per-page detail and categorisation."""
+    threshold = MIN_FONT_SIZE_PT - FONT_SIZE_TOLERANCE
+    page_issues: list[dict] = []  # one entry per page that has noncompliant chars
+
+    for p in metadata.pages:
+        if not p.fonts:
+            continue
+
+        page_height_pts = p.height_inches * 72.0
+        total_chars = 0
+        nc_body = 0
+        nc_hf = 0
+        nc_super = 0
+        min_size_on_page: float | None = None
+
+        for f in p.fonts:
+            char_count = f.get("chars", 1)
+            total_chars += char_count
+
+            if f["size"] < threshold:
+                category = _classify_font_span(f, page_height_pts)
+                if category == "header_footer":
+                    nc_hf += char_count
+                elif category == "superscript":
+                    nc_super += char_count
+                else:
+                    nc_body += char_count
+
+                if min_size_on_page is None or f["size"] < min_size_on_page:
+                    min_size_on_page = f["size"]
+
+        nc_total = nc_body + nc_hf + nc_super
+        if nc_total > 0:
+            page_issues.append({
+                "page": p.page_number + 1,
+                "total_chars": total_chars,
+                "nc_total": nc_total,
+                "nc_body": nc_body,
+                "nc_hf": nc_hf,
+                "nc_super": nc_super,
+                "min_size": min_size_on_page,
+            })
+
+    if not page_issues:
+        return CheckResult(
+            check_id="FMT-006", name="Minimum Font Size", rule="32(a)(5)",
+            passed=True, severity=Severity.REJECT,
+            message=f"Font size meets the {MIN_FONT_SIZE_PT}pt minimum.",
+        )
+
+    # Determine severity: REJECT if any page has >= threshold count, else NOTE
+    any_serious = any(pi["nc_total"] >= FONT_NONCOMPLIANT_THRESHOLD for pi in page_issues)
+    severity = Severity.REJECT if any_serious else Severity.NOTE
+
+    global_min = min(pi["min_size"] for pi in page_issues)
+    bad_page_nums = [pi["page"] for pi in page_issues]
+
+    page_label = "page" if len(bad_page_nums) == 1 else "pages"
+    message = (
+        f"Font size {global_min:.1f}pt found on {page_label} "
+        f"{_page_list(bad_page_nums)}; minimum is {MIN_FONT_SIZE_PT}pt."
+    )
+
+    # Build per-page breakdown
+    lines = [
+        f"Predominant font size: {metadata.predominant_font_size}pt. "
+        f"Smallest detected: {global_min:.1f}pt.",
+        "",
+        "Per-page breakdown:",
+    ]
+    for pi in page_issues:
+        pct = pi["nc_total"] / pi["total_chars"] * 100 if pi["total_chars"] else 0
+        parts = []
+        if pi["nc_body"]:
+            parts.append(f"{pi['nc_body']} body")
+        if pi["nc_hf"]:
+            parts.append(f"{pi['nc_hf']} header/footer")
+        if pi["nc_super"]:
+            parts.append(f"{pi['nc_super']} superscript")
+        breakdown = ", ".join(parts)
+        lines.append(
+            f"  Page {pi['page']}: {pi['nc_total']} of {pi['total_chars']:,} chars "
+            f"({pct:.1f}%) noncompliant — {breakdown}"
+        )
+
+    return CheckResult(
+        check_id="FMT-006", name="Minimum Font Size", rule="32(a)(5)",
+        passed=False, severity=severity,
+        message=message,
+        details="\n".join(lines),
+    )
 
 
 def _check_chars_per_inch(metadata: BriefMetadata) -> str:
