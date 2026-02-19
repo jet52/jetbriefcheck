@@ -1,0 +1,15 @@
+{
+  "version": "1.1.0",
+  "build_date": "2026-02-19",
+  "rules_verified": "2026-02-17",
+  "rules_freshness_days": 90,
+  "check_url": "https://raw.githubusercontent.com/jet52/ndsc-brief-compliance/main/version.json",
+  "rule_hashes": {
+    "rule-28.md": "sha256:31fe725fe3e5e3ab28b2ca3a44fd87bd938681e26cdd3484a503e34f063aabfb",
+    "rule-29.md": "sha256:32eb3208fcf5c3177df892ab20d4a281212be838d8a937b0513fd8f1f666e4da",
+    "rule-30.md": "sha256:82f32af5894551e35349f722f15cb8059816d7360504252f8df20e8da3b133d0",
+    "rule-32.md": "sha256:79035958c99d48458c5917de3c2b54d09fac72513c81c372057bd6fccef2b13c",
+    "rule-34.md": "sha256:a4bec71b9442c2348c0af552f90fa4dc8f69e45a8492db27173b715808b7e852",
+    "rule-3.4.md": "sha256:2633bd888a193d8589b2df9884ded2276ebcef5bad7e6080a0b7aae4001b698c"
+  }
+}

@@ -3,10 +3,9 @@
 Sends brief text to Claude to evaluate section presence, adequacy,
 and content quality per ND Rules of Appellate Procedure.
 
-Rule text is loaded from bundled files in references/rules/ (project dir)
-or ~/.claude/skills/brief-compliance/references/rules/ (skill dir) and
-included in the prompt so Claude can verify its citations against
-the authoritative text.
+Rule text is loaded from bundled files in references/rules/ (relative to
+the project root) and included in the prompt so Claude can verify its
+citations against the authoritative text.
 """
 
 from __future__ import annotations
@@ -20,8 +19,7 @@ import anthropic
 
 from core.models import BriefMetadata, BriefType, CheckResult, Severity
 
-# Bundled rules directory (shipped with the skill/project)
-_SKILL_RULES_DIR = Path.home() / ".claude" / "skills" / "brief-compliance" / "references" / "rules"
+# Bundled rules directory (relative to project root)
 _PROJECT_RULES_DIR = Path(__file__).resolve().parent.parent / "references" / "rules"
 
 # Which rule files are needed for semantic checks
@@ -129,11 +127,10 @@ SEMANTIC_CHECKS = [
 
 
 def _find_rule_file(filename: str) -> Path | None:
-    """Find a rule file, checking bundled locations first, then legacy path."""
-    for rules_dir in (_SKILL_RULES_DIR, _PROJECT_RULES_DIR):
-        candidate = rules_dir / filename
-        if candidate.exists():
-            return candidate
+    """Find a rule file in the bundled rules directory."""
+    candidate = _PROJECT_RULES_DIR / filename
+    if candidate.exists():
+        return candidate
     return None
 
 
@@ -152,7 +149,7 @@ def _load_rules_text() -> str:
             rule_num = filename.replace("rule-", "").replace(".md", "")
             parts.append(
                 f"[Rule {rule_num} text not available. "
-                f"Expected at {_SKILL_RULES_DIR / filename}]"
+                f"Expected at {_PROJECT_RULES_DIR / filename}]"
             )
     return "\n\n---\n\n".join(parts)
 

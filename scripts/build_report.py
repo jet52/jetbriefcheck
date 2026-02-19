@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from core.models import BriefMetadata, BriefType, CheckResult, ComplianceReport, Recommendation, Severity
 from core.report_builder import build_html_report
+from core.version_check import get_version_stamp
 
 
 def _parse_results(items: list[dict]) -> list[CheckResult]:
@@ -187,7 +188,7 @@ def main():
         pdf_filename=Path(pdf_path_str).name,
     )
 
-    html = build_html_report(report)
+    html = build_html_report(report, version_stamp=get_version_stamp())
 
     output_dir = Path(args.output_dir) if args.output_dir else intermediate_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
