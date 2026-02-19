@@ -23,16 +23,10 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from dotenv import load_dotenv
-load_dotenv(PROJECT_DIR / ".env")
-
 from core.brief_classifier import classify_brief
 from core.checks_mechanical import run_mechanical_checks
-from core.checks_semantic import run_semantic_checks
-from core.models import BriefType, ComplianceReport
+from core.models import BriefType
 from core.pdf_extract import extract_brief
-from core.recommender import compute_recommendation
-from core.report_builder import build_html_report
 
 
 def main():
@@ -106,6 +100,12 @@ def main():
         return
 
     # --- Full pipeline (original behavior) ---
+    # These imports require anthropic SDK; deferred so --mechanical-only works without it
+    from core.checks_semantic import run_semantic_checks
+    from core.models import ComplianceReport
+    from core.recommender import compute_recommendation
+    from core.report_builder import build_html_report
+
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     model = args.model or os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 
