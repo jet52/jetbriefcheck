@@ -1,6 +1,6 @@
 ---
 name: brief-compliance
-version: 1.2.0
+version: 1.3.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces an HTML

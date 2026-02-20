@@ -12,7 +12,7 @@ These are run by `check_brief.py` — no changes needed here.
 | FMT-002 | Left margin >= 1.5" | 32(a)(4) | REJECT |
 | FMT-003 | Right margin >= 1" | 32(a)(4) | CORRECTION |
 | FMT-004 | Top margin >= 1" | 32(a)(4) | CORRECTION |
-| FMT-005 | Bottom margin >= 1" | 32(a)(4) | CORRECTION | ⚠ High false-positive rate — page numbers often measured as content in margin zone |
+| FMT-005 | Bottom margin >= 1" (excluding page numbers) | 32(a)(4) | CORRECTION |
 | FMT-006 | Font size >= 12pt | 32(a)(5) | REJECT | ⚠ High false-positive rate — flags small fonts in page numbers, headers, superscripts |
 | FMT-007 | Max 16 chars/inch | 32(a)(5) | CORRECTION |
 | FMT-008 | Plain roman style | 32(a)(6) | NOTE |

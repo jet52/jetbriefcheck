@@ -137,7 +137,13 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
 
 
 def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float, float, float]:
-    """Compute margins in inches from text block positions."""
+    """Compute margins in inches from text block positions.
+
+    Page-number blocks in the bottom zone are excluded from the bottom margin
+    calculation.  Rule 32(a)(4) requires 1" margins but is silent on page
+    numbers; we allow page numbers (and only page numbers) to appear within
+    the bottom margin zone.
+    """
     if not blocks:
         # No content — return full page as margin
         return (
@@ -146,6 +152,10 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
             rect.height / 72.0,
             rect.height / 72.0,
         )
+
+    bottom_zone = rect.height * 0.9  # bottom 10% of page
+    _PAGE_NUM_RE = re.compile(r"^[-–—]?\s*\d+\s*[-–—]?$")
+    _ROMAN_RE = re.compile(r"^[-–—]?\s*[ivxlcdm]+\s*[-–—]?$", re.IGNORECASE)
 
     min_x = rect.width
     max_x = 0.0
@@ -156,6 +166,17 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
         if block["type"] != 0:  # only text blocks
             continue
         bbox = block["bbox"]
+
+        # Skip page-number blocks in the bottom zone for margin calculation
+        if bbox[1] >= bottom_zone:
+            block_text = ""
+            for line in block.get("lines", []):
+                for span in line.get("spans", []):
+                    block_text += span["text"]
+            block_text = block_text.strip()
+            if _PAGE_NUM_RE.match(block_text) or _ROMAN_RE.match(block_text):
+                continue
+
         min_x = min(min_x, bbox[0])
         max_x = max(max_x, bbox[2])
         min_y = min(min_y, bbox[1])
