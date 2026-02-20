@@ -26,6 +26,9 @@ from core.constants import (
     PAPER_TOLERANCE,
     PAPER_WIDTH,
     SECTION_PATTERNS,
+    SMALL_CAPS_SIZE_RATIO_MAX,
+    SMALL_CAPS_SIZE_RATIO_MIN,
+    SMALL_CAPS_SUSPICIOUS_PAGE_PCT,
 )
 from core.models import BriefMetadata, BriefType, CheckResult, Severity
 
@@ -162,13 +165,30 @@ def _check_fonts(metadata: BriefMetadata) -> list[CheckResult]:
     return results
 
 
-def _classify_font_span(font: dict, page_height_pts: float) -> str:
-    """Classify a font span as 'header_footer', 'superscript', or 'body'.
+def _is_all_uppercase(text: str) -> bool:
+    """True if every alphabetic character in *text* is uppercase.
 
-    - header_footer: origin_y in top or bottom 10% of the page
-    - superscript: PyMuPDF superscript flag (bit 0) set, or <=4 chars of
-      digit-only text at small size (catches footnote markers / ordinal suffixes)
-    - body: everything else
+    Returns False when there are no alphabetic characters at all (pure
+    digits / punctuation cannot be small caps).
+    """
+    alpha = [c for c in text if c.isalpha()]
+    return bool(alpha) and all(c.isupper() for c in alpha)
+
+
+def _classify_font_span(
+    font: dict,
+    page_height_pts: float,
+    predominant_size: float | None = None,
+) -> str:
+    """Classify a noncompliant font span.
+
+    Returns one of:
+      - ``"header_footer"`` — origin_y in top or bottom 10 % of the page
+      - ``"superscript"``   — PyMuPDF superscript flag set, or ≤ 4 chars at
+        small size (footnote markers / ordinal suffixes)
+      - ``"small_caps"``    — all-uppercase text at 55–85 % of the predominant
+        body font size (conventional small-caps formatting)
+      - ``"body"``          — everything else (genuine undersized body text)
     """
     origin_y = font.get("origin_y", page_height_pts / 2)
     top_zone = page_height_pts * 0.10
@@ -187,12 +207,66 @@ def _classify_font_span(font: dict, page_height_pts: float) -> str:
     if chars <= 4 and font["size"] < MIN_FONT_SIZE_PT - FONT_SIZE_TOLERANCE:
         return "superscript"
 
+    # --- Layer 1: Small-caps heuristic ---
+    # Small caps in a PDF are encoded as uppercase glyphs at a reduced point
+    # size (typically 60-80 % of the full body font).  Detect them by
+    # checking (a) all alpha chars are uppercase and (b) the size ratio
+    # falls within the expected small-caps band.
+    if predominant_size and predominant_size > 0:
+        text = font.get("text", "")
+        if text and _is_all_uppercase(text):
+            ratio = font["size"] / predominant_size
+            if SMALL_CAPS_SIZE_RATIO_MIN <= ratio <= SMALL_CAPS_SIZE_RATIO_MAX:
+                return "small_caps"
+
     return "body"
 
 
+# Patterns that identify pages where small caps are conventionally expected.
+_CONVENTIONAL_SC_PATTERNS = [
+    re.compile(r"(?i)respectfully\s+submitted"),
+    re.compile(r"(?i)certificate\s+of\s+(service|compliance|mailing)"),
+    re.compile(r"(?i)table\s+of\s+(contents|authorities)"),
+]
+
+
+def _is_conventional_small_caps_page(
+    page: "PageInfo", page_idx: int,
+) -> bool:
+    """Return True if the page is one where small caps are conventionally used.
+
+    Conventional pages:
+    - Cover page (page 0): court name, party designations
+    - TOC / TOA pages
+    - Certificate of service / compliance / signature blocks
+    """
+    if page_idx == 0:
+        return True
+    text = page.text
+    return any(pat.search(text) for pat in _CONVENTIONAL_SC_PATTERNS)
+
+
 def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
-    """FMT-006: Font size >= 12pt with per-page detail and categorisation."""
+    """FMT-006: Font size >= 12pt with per-page detail, categorisation, and
+    small-caps awareness.
+
+    Three-layer approach:
+      1. **Heuristic detection** — each sub-12pt span is classified as
+         header/footer, superscript, small_caps, or body.
+      2. **Location-aware weighting** — small caps on conventional pages
+         (cover, TOC/TOA, certificate / signature blocks) are always treated
+         as benign.  On non-conventional pages, small caps exceeding a
+         per-page percentage threshold are reclassified as body text
+         (guards against whole paragraphs set in small caps to evade the
+         font-size rule).
+      3. **Graduated severity** —
+           * all noncompliant chars are harmless (sc + sup + hf) → PASS
+             with informational note
+           * some ambiguous body chars but below threshold → NOTE
+           * substantial body text violations → REJECT
+    """
     threshold = MIN_FONT_SIZE_PT - FONT_SIZE_TOLERANCE
+    predominant = metadata.predominant_font_size
     page_issues: list[dict] = []  # one entry per page that has noncompliant chars
 
     for p in metadata.pages:
@@ -204,6 +278,7 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
         nc_body = 0
         nc_hf = 0
         nc_super = 0
+        nc_small_caps = 0
         min_size_on_page: float | None = None
 
         for f in p.fonts:
@@ -211,18 +286,31 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
             total_chars += char_count
 
             if f["size"] < threshold:
-                category = _classify_font_span(f, page_height_pts)
+                category = _classify_font_span(f, page_height_pts, predominant)
                 if category == "header_footer":
                     nc_hf += char_count
                 elif category == "superscript":
                     nc_super += char_count
+                elif category == "small_caps":
+                    nc_small_caps += char_count
                 else:
                     nc_body += char_count
 
                 if min_size_on_page is None or f["size"] < min_size_on_page:
                     min_size_on_page = f["size"]
 
-        nc_total = nc_body + nc_hf + nc_super
+        # --- Layer 2: location-aware weighting ---
+        # On non-conventional pages, if small caps exceed the suspicious
+        # threshold they are reclassified as body text.
+        if nc_small_caps > 0:
+            is_conventional = _is_conventional_small_caps_page(p, p.page_number)
+            if not is_conventional and total_chars > 0:
+                sc_pct = nc_small_caps / total_chars * 100
+                if sc_pct > SMALL_CAPS_SUSPICIOUS_PAGE_PCT:
+                    nc_body += nc_small_caps
+                    nc_small_caps = 0
+
+        nc_total = nc_body + nc_hf + nc_super + nc_small_caps
         if nc_total > 0:
             page_issues.append({
                 "page": p.page_number + 1,
@@ -231,6 +319,7 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
                 "nc_body": nc_body,
                 "nc_hf": nc_hf,
                 "nc_super": nc_super,
+                "nc_small_caps": nc_small_caps,
                 "min_size": min_size_on_page,
             })
 
@@ -241,12 +330,44 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
             message=f"Font size meets the {MIN_FONT_SIZE_PT}pt minimum.",
         )
 
-    # Determine severity: REJECT if any page has >= threshold count, else NOTE
-    any_serious = any(pi["nc_total"] >= FONT_NONCOMPLIANT_THRESHOLD for pi in page_issues)
-    severity = Severity.REJECT if any_serious else Severity.NOTE
+    # --- Layer 3: graduated severity ---
+    total_nc_body = sum(pi["nc_body"] for pi in page_issues)
+    total_nc_sc = sum(pi["nc_small_caps"] for pi in page_issues)
 
     global_min = min(pi["min_size"] for pi in page_issues)
     bad_page_nums = [pi["page"] for pi in page_issues]
+
+    # (a) All noncompliant chars are harmless → PASS with informational note
+    if total_nc_body == 0:
+        cat_parts = []
+        if total_nc_sc:
+            sc_pages = sorted({pi["page"] for pi in page_issues if pi["nc_small_caps"]})
+            cat_parts.append(f"small caps on pages {_page_list(sc_pages)}")
+        total_hf = sum(pi["nc_hf"] for pi in page_issues)
+        if total_hf:
+            hf_pages = sorted({pi["page"] for pi in page_issues if pi["nc_hf"]})
+            cat_parts.append(f"headers/footers on pages {_page_list(hf_pages)}")
+        total_sup = sum(pi["nc_super"] for pi in page_issues)
+        if total_sup:
+            sup_pages = sorted({pi["page"] for pi in page_issues if pi["nc_super"]})
+            cat_parts.append(f"superscripts on pages {_page_list(sup_pages)}")
+        detail = ("Sub-12pt characters detected; all appear consistent with "
+                  "conventional formatting (not undersized body text).")
+        if cat_parts:
+            detail += "\n" + "; ".join(cat_parts) + "."
+        return CheckResult(
+            check_id="FMT-006", name="Minimum Font Size", rule="32(a)(5)",
+            passed=True, severity=Severity.REJECT,
+            message=f"Font size meets the {MIN_FONT_SIZE_PT}pt minimum "
+                    f"(sub-12pt characters are small caps / superscripts / headers).",
+            details=detail,
+        )
+
+    # (b) / (c) Some body violations exist — determine severity
+    any_serious = any(
+        pi["nc_body"] >= FONT_NONCOMPLIANT_THRESHOLD for pi in page_issues
+    )
+    severity = Severity.REJECT if any_serious else Severity.NOTE
 
     page_label = "page" if len(bad_page_nums) == 1 else "pages"
     message = (
@@ -266,6 +387,8 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
         parts = []
         if pi["nc_body"]:
             parts.append(f"{pi['nc_body']} body")
+        if pi["nc_small_caps"]:
+            parts.append(f"{pi['nc_small_caps']} small caps")
         if pi["nc_hf"]:
             parts.append(f"{pi['nc_hf']} header/footer")
         if pi["nc_super"]:
@@ -274,6 +397,13 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
         lines.append(
             f"  Page {pi['page']}: {pi['nc_total']} of {pi['total_chars']:,} chars "
             f"({pct:.1f}%) noncompliant — {breakdown}"
+        )
+
+    if total_nc_sc > 0:
+        lines.append("")
+        lines.append(
+            f"Note: {total_nc_sc} sub-12pt characters appear consistent with "
+            f"small-caps formatting and are excluded from the violation count."
         )
 
     return CheckResult(

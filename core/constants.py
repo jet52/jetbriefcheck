@@ -20,6 +20,13 @@ MAX_CHARS_PER_INCH = 16
 FONT_SIZE_TOLERANCE = 0.3  # pt tolerance for font size detection
 FONT_NONCOMPLIANT_THRESHOLD = 10  # chars per page: >= this count is REJECT, below is NOTE
 
+# Small caps detection — Rule 32(a)(5) font size check should not penalize
+# conventional small-caps formatting (headings, citations, cover page, signatures).
+SMALL_CAPS_SIZE_RATIO_MIN = 0.55  # smallest ratio of span size to body font
+SMALL_CAPS_SIZE_RATIO_MAX = 0.85  # largest ratio (above this it's near full-size)
+SMALL_CAPS_SUSPICIOUS_PAGE_PCT = 15.0  # % of page chars; above this, small caps on
+                                        # non-conventional pages are treated as body text
+
 # --- Spacing ---
 # Double spacing is ~24pt between baselines for 12pt text.
 # We allow some tolerance: anything >= 20pt is "double-spaced."

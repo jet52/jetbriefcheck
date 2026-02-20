@@ -107,6 +107,7 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
                         "flags": span["flags"],  # bold/italic flags
                         "chars": len(span["text"].strip()),
                         "origin_y": span["origin"][1],
+                        "text": span["text"].strip(),  # for small caps detection
                     })
 
     # Margins: find bounding box of all content
