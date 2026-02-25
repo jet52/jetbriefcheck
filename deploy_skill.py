@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Deploy the brief-compliance skill to Claude Code's skills directory.
+"""Deploy the jetbriefcheck skill to Claude Code's skills directory.
 
 Copies skill files (SKILL.md, scripts/, references/, core/, .venv/, requirements.txt)
-from this repo into ~/.claude/skills/brief-compliance/.
+from this repo into ~/.claude/skills/jetbriefcheck/.
 
 Works on macOS, Linux, and Windows — no symlinks required.
 
@@ -16,7 +16,7 @@ import shutil
 import sys
 from pathlib import Path
 
-SKILL_NAME = "brief-compliance"
+SKILL_NAME = "jetbriefcheck"
 COPY_ITEMS = ["SKILL.md", "scripts", "references", "core", "requirements.txt", "version.json", ".venv"]
 
 

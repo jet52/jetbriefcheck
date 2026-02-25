@@ -3,7 +3,7 @@
   "build_date": "2026-02-25",
   "rules_verified": "2026-02-17",
   "rules_freshness_days": 90,
-  "check_url": "https://raw.githubusercontent.com/jet52/ndsc-brief-compliance/main/version.json",
+  "check_url": "https://raw.githubusercontent.com/jet52/jetbriefcheck/main/version.json",
   "rule_hashes": {
     "rule-28.md": "sha256:31fe725fe3e5e3ab28b2ca3a44fd87bd938681e26cdd3484a503e34f063aabfb",
     "rule-29.md": "sha256:32eb3208fcf5c3177df892ab20d4a281212be838d8a937b0513fd8f1f666e4da",

@@ -1,4 +1,4 @@
-# Appellate Brief Compliance Checker
+# JetBriefCheck
 
 Checks appellate brief PDFs for compliance with the North Dakota Rules of Appellate Procedure and produces an HTML compliance report with a recommended action: **Accept**, **Correction Letter**, or **Reject**.
 
@@ -6,12 +6,12 @@ Checks appellate brief PDFs for compliance with the North Dakota Rules of Appell
 
 ## Installing the Skill in Claude (Browser)
 
-This section walks you through adding the Brief Compliance Checker to your Claude account so you can use it directly in a browser chat session. No programming knowledge is required.
+This section walks you through adding the JetBriefCheck to your Claude account so you can use it directly in a browser chat session. No programming knowledge is required.
 
 ### What You Need Before You Start
 
 - A Claude account at [claude.ai](https://claude.ai) with a Pro, Team, or Enterprise plan (the skill requires the ability to upload files and use projects).
-- The **`brief-compliance.zip`** file from this repository ([v1.5.0](https://github.com/jet52/ndsc-brief-compliance/releases/tag/v1.5.0) or later). Click on `brief-compliance.zip` in the repository file list and then click the download button.
+- The **`jetbriefcheck.zip`** file from this repository ([v1.5.0](https://github.com/jet52/jetbriefcheck/releases/tag/v1.5.0) or later). Click on `jetbriefcheck.zip` in the repository file list and then click the download button.
 
 ### Step-by-Step Installation
 
@@ -20,7 +20,7 @@ This section walks you through adding the Brief Compliance Checker to your Claud
 1. Go to [claude.ai](https://claude.ai) and sign in.
 2. In the left sidebar, click **Projects**.
 3. Click **Create Project** (or the **+** button).
-4. Give your project a name, such as "Brief Compliance Checker".
+4. Give your project a name, such as "JetBriefCheck".
 5. Click **Create**.
 
 #### 2. Upload the Skill Files to Project Knowledge
@@ -29,7 +29,7 @@ This section walks you through adding the Brief Compliance Checker to your Claud
 
 1. Inside your new project, look for the **Project Knowledge** section (sometimes labeled "Project files" or accessible via a paperclip/attachment icon in the project settings).
 2. Click **Upload** or **Add files**.
-3. Select the **`brief-compliance.zip`** file you downloaded earlier.
+3. Select the **`jetbriefcheck.zip`** file you downloaded earlier.
 4. Wait for the upload to finish. Claude will unpack and index the contents automatically.
 
 The ZIP file contains everything the skill needs: the analysis scripts, the bundled North Dakota appellate rules, check definitions, and the skill instructions. As of v1.5.0, `SKILL.md` is fully self-contained — all rule text and check definitions are bundled inline, so the skill works even without PyMuPDF (falling back to semantic-only checks).
@@ -57,7 +57,7 @@ If Claude does not seem to recognize the skill, double-check that:
 
 The skill lives inside the project you created — it is not available in other projects or in regular (non-project) chats. Claude does not currently offer a way to install a skill globally across your entire account.
 
-In practice this isn't a limitation: just **open all your brief-checking chats inside this one project**. You can create as many chats as you like within a project, and every one of them will have access to the skill files and instructions automatically. Think of the project as a dedicated "Brief Compliance Checker" app that's always ready when you need it.
+In practice this isn't a limitation: just **open all your brief-checking chats inside this one project**. You can create as many chats as you like within a project, and every one of them will have access to the skill files and instructions automatically. Think of the project as a dedicated "JetBriefCheck" app that's always ready when you need it.
 
 ---
 
@@ -67,7 +67,7 @@ Once installed, using the skill is straightforward. You upload a PDF of an appel
 
 ### Checking a Brief
 
-1. **Open a chat** inside your Brief Compliance Checker project.
+1. **Open a chat** inside your JetBriefCheck project.
 2. **Drag and drop** your brief PDF into the chat window (or click the attachment/paperclip icon and select the file).
 3. **Tell Claude what to do.** You can simply say:
 
@@ -171,7 +171,7 @@ python deploy_skill.py
 # Run the web interface
 python app.py
 
-# Or use the Claude Code skill: /brief-compliance <path-to-pdf>
+# Or use the Claude Code skill: /jetbriefcheck <path-to-pdf>
 ```
 
 ## Architecture
@@ -185,7 +185,7 @@ python app.py
 
 ## Skill Deployment (Claude Code CLI)
 
-The Claude Code skill (`/brief-compliance`) reads its files from `~/.claude/skills/brief-compliance/`. This repo is the single source of truth — `deploy_skill.py` copies the needed files into the skill directory.
+The Claude Code skill (`/jetbriefcheck`) reads its files from `~/.claude/skills/jetbriefcheck/`. This repo is the single source of truth — `deploy_skill.py` copies the needed files into the skill directory.
 
 ```bash
 python deploy_skill.py

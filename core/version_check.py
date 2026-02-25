@@ -107,7 +107,7 @@ def fetch_remote_version(timeout: float = 2.0) -> Optional[dict]:
 
     try:
         from urllib.request import urlopen, Request
-        req = Request(url, headers={"User-Agent": "brief-compliance-skill"})
+        req = Request(url, headers={"User-Agent": "jetbriefcheck"})
         with urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except Exception:
@@ -128,7 +128,7 @@ def check_remote_version(local_version: dict, timeout: float = 2.0) -> list[str]
         messages.append(
             f"A newer version of the brief compliance skill is available: "
             f"v{remote_ver} (you have v{local_ver}). "
-            f"Visit https://github.com/jet52/ndsc-brief-compliance for updates."
+            f"Visit https://github.com/jet52/jetbriefcheck for updates."
         )
 
     # Check if remote has newer rule hashes (rules updated upstream)
@@ -175,21 +175,25 @@ def get_version_warnings(check_remote: bool = True, timeout: float = 2.0) -> lis
 
 
 def get_version_stamp() -> str:
-    """Return a short version + rule date string for report footers.
+    """Return a short version + build date + rule date string for report footers.
 
-    Example: "v1.1.0 | Rules verified 2026-02-17"
+    Example: "v1.6.0 (2026-02-25) · Rules current as of 2026-02-17"
     """
     local = load_local_version()
     if not local:
         return ""
 
-    parts = []
-    version = local.get("version")
-    if version:
-        parts.append(f"v{version}")
+    version = local.get("version", "")
+    build_date = local.get("build_date", "")
+    verified = local.get("rules_verified", "")
 
-    verified = local.get("rules_verified")
+    if not version:
+        return ""
+
+    stamp = f"v{version}"
+    if build_date:
+        stamp += f" ({build_date})"
     if verified:
-        parts.append(f"Rules verified {verified}")
+        stamp += f" · Rules current as of {verified}"
 
-    return " | ".join(parts)
+    return stamp

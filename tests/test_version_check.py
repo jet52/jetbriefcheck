@@ -71,7 +71,7 @@ class TestLoadLocalVersion:
         assert "rule_hashes" in local_version
 
     def test_returns_expected_version(self, local_version):
-        assert local_version["version"] == "1.5.0"
+        assert local_version["version"] == "1.6.0"
 
     def test_returns_empty_dict_for_missing_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr("core.version_check.VERSION_FILE", tmp_path / "nope.json")
@@ -260,7 +260,7 @@ class TestRemoteVersionCheck:
             messages = check_remote_version(local_version)
             assert len(messages) >= 1
             assert "2.0.0" in messages[0]
-            assert "v1.5.0" in messages[0]
+            assert "v1.6.0" in messages[0]
 
     def test_check_remote_warns_on_newer_rules(self, local_version):
         remote = dict(local_version)
@@ -316,9 +316,9 @@ class TestGetVersionWarnings:
 class TestGetVersionStamp:
     def test_returns_expected_format(self):
         stamp = get_version_stamp()
-        assert "v1.5.0" in stamp
-        assert "Rules verified 2026-02-17" in stamp
-        assert "|" in stamp
+        assert stamp.startswith("v")
+        assert "Rules current as of" in stamp
+        assert "·" in stamp
 
     def test_returns_empty_for_missing_version_file(self, monkeypatch):
         monkeypatch.setattr("core.version_check.VERSION_FILE", Path("/nonexistent/version.json"))
@@ -341,10 +341,10 @@ class TestReportFooter:
             results=[],
             report_id="test123",
         )
-        html = build_html_report(report, version_stamp="v1.1.0 | Rules verified 2026-02-17")
+        html = build_html_report(report, version_stamp="v1.1.0 (2026-02-25) · Rules current as of 2026-02-17")
         assert "v1.1.0" in html
-        assert "Rules verified 2026-02-17" in html
-        assert "&middot;" in html
+        assert "Rules current as of 2026-02-17" in html
+        assert "JetBriefCheck" in html
 
     def test_footer_omits_stamp_when_empty(self):
         from core.models import ComplianceReport, BriefType, Recommendation
@@ -358,4 +358,4 @@ class TestReportFooter:
         )
         html = build_html_report(report, version_stamp="")
         assert "&middot;" not in html
-        assert "Brief Compliance Checker</p>" in html
+        assert "JetBriefCheck</p>" in html

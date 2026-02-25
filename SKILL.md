@@ -1,5 +1,5 @@
 ---
-name: brief-compliance
+name: jetbriefcheck
 version: 1.6.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
