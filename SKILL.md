@@ -1,6 +1,6 @@
 ---
 name: brief-compliance
-version: 1.5.0
+version: 1.6.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -175,11 +175,12 @@ Based on testing across 13 briefs (Feb 2026):
 
 ### Mechanical Check False Positives
 
-Three mechanical checks have high false-positive rates. When reporting results, note these caveats to the user:
+Two mechanical checks have high false-positive rates. When reporting results, note these caveats to the user:
 
 - **FMT-006 (Font Size)**: Measures the minimum font found anywhere in the PDF. Small fonts in page numbers, headers, footers, superscripts, or PDF artifacts trigger REJECT even when the body text is properly 12pt. If this is the sole REJECT trigger and the reported minimum is 8-11pt, flag it as a likely false positive.
-- **FMT-009 (Spacing)**: Nearly all briefs are flagged as single-spaced. The detector is miscalibrated for many PDF encodings. If the brief appears to be a standard attorney-prepared document, note this is likely a false positive.
 - **FMT-005 (Bottom Margin)**: Page numbers at the bottom are measured as content in the margin zone. Nearly always triggers.
+
+**Fixed (v1.6.0):** FMT-009 (Spacing) previously only measured intra-block line gaps, missing PDFs that encode each line as a separate text block. Now also measures inter-block baseline distances, which correctly detects double spacing in these PDFs.
 
 ### Brief Type Auto-Detection
 
@@ -224,7 +225,7 @@ These are run by `check_brief.py` — no changes needed here.
 | FMT-006 | Font size >= 12pt | 32(a)(5) | REJECT | ⚠ High false-positive rate — flags small fonts in page numbers, headers, superscripts |
 | FMT-007 | Max 16 chars/inch | 32(a)(5) | CORRECTION |
 | FMT-008 | Plain roman style | 32(a)(6) | NOTE |
-| FMT-009 | Double-spaced body text | 32(a)(5) | CORRECTION | ⚠ High false-positive rate — spacing detection miscalibrated for many PDF encodings |
+| FMT-009 | Double-spaced body text | 32(a)(5) | CORRECTION |
 | FMT-010 | Footnotes double-spaced, same typeface | 32(a)(5) | NOTE |
 | FMT-011 | Pages numbered at bottom | 32(a)(4) | CORRECTION |
 | FMT-012 | Numbering starts with "1" on cover | 32(a)(4) | NOTE |

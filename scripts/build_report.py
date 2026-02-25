@@ -27,10 +27,33 @@ from core.report_builder import build_html_report
 from core.version_check import get_version_stamp
 
 
+def _extract_pages_from_message(message: str) -> list[int] | None:
+    """Try to extract page numbers from a check message like 'Top Margin < 1" on 2, 3, 4'."""
+    # Match patterns like "on 2, 3, 4, 5" or "on pages 2, 3, 4"
+    m = re.search(r'\bon(?:\s+pages?)?\s+([\d,\s]+)', message)
+    if m:
+        nums = re.findall(r'\d+', m.group(1))
+        if nums:
+            return [int(n) for n in nums]
+    # Match "pages: 2, 3" in details
+    m = re.search(r'pages?[:\s]+([\d,\s]+)', message, re.IGNORECASE)
+    if m:
+        nums = re.findall(r'\d+', m.group(1))
+        if nums:
+            return [int(n) for n in nums]
+    return None
+
+
 def _parse_results(items: list[dict]) -> list[CheckResult]:
     """Convert a list of JSON dicts into CheckResult objects."""
     results = []
     for item in items:
+        pages = item.get("pages")
+        if pages is None and not item["passed"]:
+            # Try to extract page numbers from message or details
+            pages = _extract_pages_from_message(item["message"])
+            if pages is None and item.get("details"):
+                pages = _extract_pages_from_message(item["details"])
         results.append(CheckResult(
             check_id=item["check_id"],
             name=item["name"],
@@ -40,6 +63,7 @@ def _parse_results(items: list[dict]) -> list[CheckResult]:
             message=item["message"],
             details=item.get("details"),
             applicable=item.get("applicable", True),
+            pages=pages,
         ))
     return results
 
@@ -130,6 +154,8 @@ def main():
     parser.add_argument("--semantic", required=True, help="Path to semantic results JSON from Claude Code")
     parser.add_argument("--output-dir", default=None, help="Directory for HTML report (default: same as intermediate)")
     parser.add_argument("--reasoning", default=None, help="Optional reasoning text for the report summary")
+    parser.add_argument("--pymupdf", action="store_true", default=True, help="PyMuPDF was used for mechanical checks (default)")
+    parser.add_argument("--no-pymupdf", action="store_false", dest="pymupdf", help="PyMuPDF was NOT used (fallback mode)")
     args = parser.parse_args()
 
     intermediate_path = Path(args.intermediate)
@@ -186,6 +212,7 @@ def main():
         case_title=case_title,
         brief_label=brief_label,
         pdf_filename=Path(pdf_path_str).name,
+        pymupdf_used=args.pymupdf,
     )
 
     html = build_html_report(report, version_stamp=get_version_stamp())

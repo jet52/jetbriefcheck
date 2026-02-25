@@ -39,6 +39,7 @@ class CheckResult:
     message: str
     details: Optional[str] = None
     applicable: bool = True  # False if this check doesn't apply to the brief type
+    pages: Optional[list[int]] = None  # Page numbers with issues (if applicable)
 
     @property
     def failed(self) -> bool:
@@ -91,6 +92,7 @@ class ComplianceReport:
     case_title: str = ""        # e.g. "Example v. Case et al."
     brief_label: str = ""       # e.g. "Amended Brief of Defendant-Appellant"
     pdf_filename: str = ""      # original PDF filename
+    pymupdf_used: bool = True   # Whether PyMuPDF was used for mechanical checks
 
     @property
     def failed_checks(self) -> list[CheckResult]:

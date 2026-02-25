@@ -200,22 +200,43 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
 
 
 def _estimate_line_spacing(blocks: list[dict]) -> Optional[float]:
-    """Estimate typical line spacing in points from text block baselines."""
+    """Estimate typical line spacing in points from text block baselines.
+
+    Measures both intra-block line gaps and inter-block gaps (for PDFs that
+    encode each visual line as a separate block).
+    """
     spacings = []
+
+    # 1. Intra-block: gaps between lines within the same block
     for block in blocks:
         if block["type"] != 0:
             continue
         lines = block.get("lines", [])
         for i in range(1, len(lines)):
-            prev_baseline = lines[i - 1]["bbox"][3]  # bottom of previous line
-            curr_baseline = lines[i]["bbox"][1]  # top of current line
-            # More accurate: use the origin y of spans
             prev_origins = [s["origin"][1] for s in lines[i - 1].get("spans", []) if s["text"].strip()]
             curr_origins = [s["origin"][1] for s in lines[i].get("spans", []) if s["text"].strip()]
             if prev_origins and curr_origins:
                 spacing = min(curr_origins) - min(prev_origins)
-                if 8 < spacing < 60:  # reasonable range
+                if 8 < spacing < 60:
                     spacings.append(spacing)
+
+    # 2. Inter-block: gaps between consecutive single-line text blocks.
+    #    Many PDF generators emit each line as its own block, so intra-block
+    #    measurement finds nothing. Walk consecutive text blocks and measure
+    #    baseline-to-baseline distance.
+    text_blocks = [b for b in blocks if b.get("type") == 0]
+    for i in range(1, len(text_blocks)):
+        prev_lines = text_blocks[i - 1].get("lines", [])
+        curr_lines = text_blocks[i].get("lines", [])
+        if not prev_lines or not curr_lines:
+            continue
+        # Use the last line of prev block and first line of curr block
+        prev_origins = [s["origin"][1] for s in prev_lines[-1].get("spans", []) if s["text"].strip()]
+        curr_origins = [s["origin"][1] for s in curr_lines[0].get("spans", []) if s["text"].strip()]
+        if prev_origins and curr_origins:
+            spacing = min(curr_origins) - min(prev_origins)
+            if 8 < spacing < 60:
+                spacings.append(spacing)
 
     return statistics.median(spacings) if spacings else None
 
