@@ -50,7 +50,7 @@ Use `/tmp/` as the working directory for all intermediate and output files.
 Run the check script in mechanical-only mode. This makes **no API calls**:
 
 ```bash
-python scripts/check_brief.py "/tmp/brief.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus] [--output-dir /tmp]
+python3 scripts/check_brief.py "/tmp/brief.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus] [--output-dir /tmp]
 ```
 
 - **If the script succeeds**: Capture the intermediate JSON file path from stdout. Continue to **Phase 2 (Full Mode)**.
@@ -100,7 +100,7 @@ The severity values must be lowercase: `"reject"`, `"correction"`, or `"note"`.
 Run the report builder to merge results and generate the HTML report:
 
 ```bash
-python scripts/build_report.py \
+python3 scripts/build_report.py \
   --intermediate "<intermediate-json-path>" \
   --semantic "<semantic-json-path>"
 ```

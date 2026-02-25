@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 SKILL_NAME = "brief-compliance"
-COPY_ITEMS = ["SKILL.md", "scripts", "references", "core", "requirements.txt", ".venv"]
+COPY_ITEMS = ["SKILL.md", "scripts", "references", "core", "requirements.txt", "version.json", ".venv"]
 
 
 def _get_skills_dir() -> Path:
