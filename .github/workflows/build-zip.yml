@@ -1,21 +1,14 @@
-name: Build skill ZIP
+name: Release with skill ZIP
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'core/**'
-      - 'references/**'
-      - 'scripts/**'
-      - 'SKILL.md'
-      - 'requirements.txt'
-      - 'version.json'
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
 jobs:
-  build-zip:
+  attach-zip:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +19,6 @@ jobs:
           dest="$tmp/jetbriefcheck"
           mkdir -p "$dest"
 
-          # Copy the files that belong in the ZIP
           cp -r core "$dest/core"
           cp -r references "$dest/references"
           cp -r scripts "$dest/scripts"
@@ -34,23 +26,12 @@ jobs:
           cp requirements.txt "$dest/requirements.txt"
           cp version.json "$dest/version.json"
 
-          # Remove any __pycache__ or .pyc files
           find "$dest" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
           find "$dest" -name '*.pyc' -delete 2>/dev/null || true
 
-          # Build the ZIP
           (cd "$tmp" && zip -r "$GITHUB_WORKSPACE/jetbriefcheck.zip" jetbriefcheck/)
 
-      - name: Check for changes
-        id: diff
-        run: |
-          git diff --quiet jetbriefcheck.zip && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Commit updated ZIP
-        if: steps.diff.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add jetbriefcheck.zip
-          git commit -m "Rebuild jetbriefcheck.zip [automated]"
-          git push
+      - name: Attach ZIP to release
+        run: gh release upload "${{ github.event.release.tag_name }}" jetbriefcheck.zip --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

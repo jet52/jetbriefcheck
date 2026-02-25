@@ -11,7 +11,7 @@ This section walks you through adding the JetBriefCheck to your Claude account s
 ### What You Need Before You Start
 
 - A Claude account at [claude.ai](https://claude.ai) with a Pro, Team, or Enterprise plan (the skill requires the ability to upload files and use projects).
-- The **`jetbriefcheck.zip`** file from this repository ([v1.5.0](https://github.com/jet52/jetbriefcheck/releases/tag/v1.5.0) or later). Click on `jetbriefcheck.zip` in the repository file list and then click the download button.
+- The **`jetbriefcheck.zip`** file from the [latest release](https://github.com/jet52/jetbriefcheck/releases/latest). Click on `jetbriefcheck.zip` under Assets to download it.
 
 ### Step-by-Step Installation
 
