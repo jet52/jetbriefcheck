@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 1.6.0
+version: 1.6.1
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
