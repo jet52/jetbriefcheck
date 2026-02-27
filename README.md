@@ -1,160 +1,69 @@
-# JetBriefCheck
+# JetBriefCheck — Iowa
 
-Checks appellate brief PDFs for compliance with the North Dakota Rules of Appellate Procedure and produces an HTML compliance report with a recommended action: **Accept**, **Correction Letter**, or **Reject**.
+Checks appellate brief PDFs for compliance with the **Iowa Rules of Appellate Procedure** and produces an HTML compliance report with a recommended action: **Accept**, **Correction Letter**, or **Reject**.
+
+> **Fork notice**: This is an Iowa adaptation of [JetBriefCheck](https://github.com/jet52/jetbriefcheck), originally built for the North Dakota Rules of Appellate Procedure.
+
+---
+
+## Key Differences from North Dakota Version
+
+| Feature | North Dakota | Iowa |
+|---------|-------------|------|
+| Length limits | Page-based (38 pages) | **Word-based (14,000 words)** |
+| Font size | 12pt minimum | **14pt minimum** (proportional serif) |
+| Left margin | 1.5 inches | **1 inch** (all sides equal) |
+| Paragraph numbering | Required (arabic numerals) | Not required |
+| TOC/TOA references | Paragraph references | **Page references** |
+| Cover colors | Blue/red/gray/green | **None** (electronic filing) |
+| Record citations | (R#:#) format | **(App. pp. ___) / (Tr. p. ___)** |
+| Routing statement | Not required | **Required** (Supreme Court vs. Court of Appeals) |
+| Preservation of error | In argument (optional) | **Required in each argument division** |
 
 ---
 
 ## Installing the Skill in Claude (Browser)
 
-This section walks you through adding the JetBriefCheck to your Claude account so you can use it directly in a browser chat session. No programming knowledge is required.
-
 ### What You Need Before You Start
 
-- A Claude account at [claude.ai](https://claude.ai) with a Pro, Team, or Enterprise plan (the skill requires the ability to upload files and use projects).
-- The **`jetbriefcheck.zip`** file from the [latest release](https://github.com/jet52/jetbriefcheck/releases/latest). Click on `jetbriefcheck.zip` under Assets to download it.
+- A Claude account at [claude.ai](https://claude.ai) with a Pro, Team, or Enterprise plan.
+- The **`jetbriefcheck.zip`** file from the latest release.
 
 ### Step-by-Step Installation
 
-#### 1. Open Claude and Create a New Project
-
-1. Go to [claude.ai](https://claude.ai) and sign in.
-2. In the left sidebar, click **Projects**.
-3. Click **Create Project** (or the **+** button).
-4. Give your project a name, such as "JetBriefCheck".
-5. Click **Create**.
-
-#### 2. Upload the Skill Files to Project Knowledge
-
-> **Important — upload to the *project*, not to a chat.** Files uploaded to Project Knowledge are available in every chat you open inside that project. If you instead drag a file into a regular chat window, it only exists in that single conversation and disappears when you start a new one. Make sure you are adding the file through the project settings, not the chat input box.
-
-1. Inside your new project, look for the **Project Knowledge** section (sometimes labeled "Project files" or accessible via a paperclip/attachment icon in the project settings).
-2. Click **Upload** or **Add files**.
-3. Select the **`jetbriefcheck.zip`** file you downloaded earlier.
-4. Wait for the upload to finish. Claude will unpack and index the contents automatically.
-
-The ZIP file contains everything the skill needs: the analysis scripts, the bundled North Dakota appellate rules, check definitions, and the skill instructions. As of v1.5.0, `SKILL.md` is fully self-contained — all rule text and check definitions are bundled inline, so the skill works even without PyMuPDF (falling back to semantic-only checks).
-
-#### 3. Set the Project Instructions
-
-1. In your project settings, find the **Custom Instructions** field (also called "System prompt" or "Project instructions").
-2. Open the file `SKILL.md` from this repository (or extract it from the ZIP). Copy its entire contents.
-3. Paste the contents into the Custom Instructions field.
-4. Save the project settings.
-
-These instructions tell Claude how to run the compliance analysis step by step whenever you upload a brief.
-
-#### 4. Verify the Installation
-
-1. Open a new chat inside the project.
-2. Type: **"Are you ready to check a brief for compliance?"**
-3. Claude should respond confirming it can analyze appellate briefs against the North Dakota Rules.
-
-If Claude does not seem to recognize the skill, double-check that:
-- The ZIP file was uploaded to the project (not just to a regular chat).
-- The SKILL.md contents were pasted into the project's Custom Instructions.
-
-### A Note on Scope
-
-The skill lives inside the project you created — it is not available in other projects or in regular (non-project) chats. Claude does not currently offer a way to install a skill globally across your entire account.
-
-In practice this isn't a limitation: just **open all your brief-checking chats inside this one project**. You can create as many chats as you like within a project, and every one of them will have access to the skill files and instructions automatically. Think of the project as a dedicated "JetBriefCheck" app that's always ready when you need it.
+1. Go to [claude.ai](https://claude.ai) and create a new **Project** (e.g., "JetBriefCheck Iowa").
+2. Upload the `jetbriefcheck.zip` file to **Project Knowledge**.
+3. Paste the contents of `SKILL.md` into the project's **Custom Instructions**.
+4. Open a new chat and ask: **"Are you ready to check a brief for compliance?"**
 
 ---
 
 ## Using the Skill
 
-Once installed, using the skill is straightforward. You upload a PDF of an appellate brief, and Claude produces a detailed compliance report.
-
-### Checking a Brief
-
 1. **Open a chat** inside your JetBriefCheck project.
-2. **Drag and drop** your brief PDF into the chat window (or click the attachment/paperclip icon and select the file).
-3. **Tell Claude what to do.** You can simply say:
-
-   > "Check this brief for compliance."
-
-   Or be more specific if you know the brief type:
-
-   > "Check this appellant brief for compliance."
-   >
-   > "This is an appellee brief. Please run a compliance check."
-   >
-   > "Check this reply brief."
-
-4. **Wait for the analysis.** Claude will work through several phases automatically:
-   - **Extraction** — reads the PDF and measures formatting (paper size, margins, fonts, spacing, page count).
-   - **Mechanical checks** — compares measurements against Rule 32 requirements.
-   - **Semantic checks** — reads the brief text and evaluates whether required sections are present and adequate (Table of Contents, Statement of Issues, Argument, etc.).
-   - **Report generation** — combines all results into an HTML compliance report.
-
-   > **Note:** If PyMuPDF is not available (e.g., in a claude.ai project), the skill automatically falls back to semantic-only checks. Claude reads the PDF directly and produces a text report, noting that mechanical checks (margins, fonts, spacing, page limits) were skipped.
-
-5. **Review the results.** Claude will:
-   - State the **recommended action**: Accept, Correction Letter, or Reject.
-   - Summarize any **failed checks**, grouped by severity.
-   - Provide a **downloadable HTML report** with full details.
-
-### Understanding the Report
-
-The HTML report has several sections:
-
-- **Recommended Action** — a color-coded banner at the top:
-  - **Green (Accept)** — the brief appears to comply with all rules.
-  - **Yellow (Correction Letter)** — there are formatting issues that should be corrected, but the brief is not rejected outright.
-  - **Red (Reject)** — there are serious compliance failures that warrant rejection.
-
-- **Failed Checks** — grouped into three severity levels:
-  - **Critical (Reject)** — violations that alone justify rejection (e.g., wrong paper size, font too small, over the page limit).
-  - **Correction Required** — problems that should be fixed but don't rise to rejection level (e.g., margin too narrow, missing paragraph numbering).
-  - **Advisory Notes** — minor issues or observations (e.g., oral argument notation not found, font style question).
-
-- **Passed Checks** — an expandable section listing everything that passed. Click to expand.
-
-- **Not Applicable** — checks that don't apply to this brief type (e.g., amicus-specific checks on an appellant brief).
-
-Each failed check shows:
-- A **check ID** (e.g., FMT-006) for reference.
-- The **rule citation** (e.g., Rule 32(a)(5)), linked to the official rule text on ndcourts.gov.
-- A **message** explaining what was found.
-- **Details** with specifics — for font size issues, this includes a per-page breakdown showing which pages have undersized text and how many characters are affected.
-
-### Tips for Best Results
-
-- **Specify the brief type** if you know it. Auto-detection works for most appellant briefs but sometimes misidentifies appellee and reply briefs. Telling Claude the type up front avoids this.
-
-- **Known false positives to watch for:**
-  - **Font size (FMT-006)**: Page numbers, footnote markers, and superscripts are often smaller than 12pt. The report now categorizes these separately (body text vs. header/footer vs. superscript) so you can see whether the issue is real body text or just incidental small characters. If the only noncompliant characters on a page are in the header/footer or superscript categories, the severity is downgraded to a note rather than a rejection.
-  - **Line spacing (FMT-009)**: The spacing detector can misread certain PDF encodings. If the brief was prepared in a standard word processor with double spacing selected, a spacing failure is likely a false positive.
-  - **Bottom margin (FMT-005)**: Page numbers at the bottom of the page are measured as content, which makes the bottom margin appear smaller than it really is.
-
-- **You can ask follow-up questions.** After the report is generated, you can ask Claude things like:
-  - "Which pages have the font size issue?"
-  - "Is the Table of Contents adequate?"
-  - "What would need to be fixed for this brief to be accepted?"
-  - "Can you re-check this as an appellee brief instead?"
-
-- **You can check multiple briefs** in the same chat session. Just upload another PDF and ask Claude to check it.
+2. **Upload a brief PDF** (drag and drop or click attach).
+3. **Tell Claude what to do**: "Check this brief for compliance."
+4. **Review the results**: recommendation, failed checks, and downloadable HTML report.
 
 ### Brief Types Supported
 
-| Brief Type | Description | Page Limit |
+| Brief Type | Description | Word Limit |
 |------------|-------------|------------|
-| Appellant | Opening brief filed by the appealing party | 38 pages |
-| Appellee | Response brief filed by the opposing party | 38 pages |
-| Reply | Reply to the appellee's brief | 12 pages |
-| Cross-Appeal | Brief when both parties appeal | 38 pages |
-| Amicus Curiae | "Friend of the court" brief | 19 pages |
+| Appellant | Opening brief filed by the appealing party | 14,000 words |
+| Appellee | Response brief filed by the opposing party | 14,000 words |
+| Reply | Reply to the appellee's brief | 7,000 words |
+| Cross-Appeal | Brief when both parties appeal | 14,000 words |
+| Amicus Curiae | "Friend of the court" brief | 7,000 words |
 
 ### What Rules Are Checked
 
-The checker evaluates compliance against these North Dakota rules:
+The checker evaluates compliance against these Iowa rules:
 
-- **Rule 28** — Required contents of briefs (sections, formatting of arguments, etc.)
-- **Rule 29** — Requirements for amicus curiae briefs
-- **Rule 30** — How to cite the record
-- **Rule 32** — Physical formatting (paper size, margins, fonts, spacing, page limits, cover requirements)
-- **Rule 34** — Oral argument notation on the cover
-- **Rule 3.4** — Privacy protection for personal identifiers in filings
+- **Rule 6.903** — Format and contents of briefs (sections, formatting, type-volume)
+- **Rule 6.904** — References in briefs (record citations, party names)
+- **Rule 6.906** — Requirements for amicus curiae briefs
+- **Rule 6.907** — Oral argument
+- **Rule 6.1101** — Routing of cases (Supreme Court vs. Court of Appeals)
 
 ---
 
@@ -170,8 +79,6 @@ python deploy_skill.py
 
 # Run the web interface
 python app.py
-
-# Or use the Claude Code skill: /jetbriefcheck <path-to-pdf>
 ```
 
 ## Architecture
@@ -180,39 +87,29 @@ python app.py
 - **`scripts/`** — CLI scripts for the Claude Code skill workflow (`check_brief.py`, `build_report.py`)
 - **`references/`** — Check definitions, rules summary, and bundled rule text
 - **`web/`** — Flask web interface (upload form, report viewer, JSON API)
-- **`SKILL.md`** — Self-contained Claude Code skill definition (bundles all rules and check definitions inline; works with or without PyMuPDF)
+- **`SKILL.md`** — Self-contained Claude Code skill definition
 - **`deploy_skill.py`** — Cross-platform script to deploy the skill to `~/.claude/skills/`
-
-## Skill Deployment (Claude Code CLI)
-
-The Claude Code skill (`/jetbriefcheck`) reads its files from `~/.claude/skills/jetbriefcheck/`. This repo is the single source of truth — `deploy_skill.py` copies the needed files into the skill directory.
-
-```bash
-python deploy_skill.py
-```
-
-Re-run after making changes in the repo to sync them to the deployed skill. Works on macOS, Linux, and Windows.
 
 ## Bundled Rules
 
-The full text of the following rules is bundled in `references/rules/`:
+The following rule summaries are bundled in `references/rules/`:
 
 | File | Rule | Subject |
 |------|------|---------|
-| `rule-28.md` | N.D.R.App.P. 28 | Briefs |
-| `rule-29.md` | N.D.R.App.P. 29 | Brief of an Amicus Curiae |
-| `rule-30.md` | N.D.R.App.P. 30 | References to the Record |
-| `rule-32.md` | N.D.R.App.P. 32 | Form of Briefs and Other Documents |
-| `rule-34.md` | N.D.R.App.P. 34 | Oral Argument |
-| `rule-3.4.md` | N.D.R.Ct. 3.4 | Privacy Protection for Filings |
+| `rule-6.903.md` | Iowa R. App. P. 6.903 | Briefs (format and content) |
+| `rule-6.904.md` | Iowa R. App. P. 6.904 | References in Briefs |
+| `rule-6.906.md` | Iowa R. App. P. 6.906 | Brief of an Amicus Curiae |
+| `rule-6.907.md` | Iowa R. App. P. 6.907 | Oral Argument |
+| `rule-6.1101.md` | Iowa R. App. P. 6.1101 | Routing of Cases |
+| `rule-1.422.md` | Confidential Filings | Privacy / Confidential Appendix |
 
-Rules were last copied from the authoritative source on **2026-02-17**.
+> **Important**: The bundled rule files are summaries. You should verify them against the authoritative text at the [Iowa Legislature website](https://www.legis.iowa.gov/law/courtRules/courtRulesListings) (Chapter 6).
 
 ## TODO
 
-- [ ] **Rule freshness check**: Add a feature (script or startup check) that compares the bundled rule files against the current versions at ndcourts.gov to detect whether any rules have been amended since the bundled copies were last updated. Candidate URLs:
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/28
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/29
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/32
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/34
-  - https://www.ndcourts.gov/legal-resources/rules/ndrct/3-4
+- [ ] **Verify rule text**: Download the full PDF of Chapter 6 from the Iowa Legislature and verify all rule citations and thresholds against the authoritative text.
+- [ ] **Update SKILL.md**: Rewrite the self-contained skill instructions for Iowa rules (currently still contains ND content).
+- [ ] **Update mechanical checks**: Adapt `checks_mechanical.py` to use word-count limits instead of page limits, and update rule citations from ND to Iowa format.
+- [ ] **Test with real Iowa briefs**: Obtain sample Iowa appellate briefs and validate the checker against them.
+- [ ] **Compute rule hashes**: Once rule files are finalized, regenerate `version.json` with SHA-256 hashes.
+- [ ] **Update deploy_skill.py**: Point to Iowa-specific repo URL if forked to a separate GitHub repository.

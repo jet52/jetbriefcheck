@@ -1,100 +1,108 @@
-# ND Rules — Condensed Summary
+# Iowa Rules — Condensed Summary
 
-Verified against the authoritative rule text bundled in `references/rules/`.
+Verified against the Iowa Rules of Appellate Procedure (Chapter 6).
 
-## Rule 28 — Briefs
+## Rule 6.903 — Briefs
 
-### (a) Form of Briefs
-All briefs must comply with Rule 25 and Rule 32.
+### (1) Form of Briefs
+All briefs must comply with the formatting requirements:
+- **Paper**: 8½ x 11 inch, clear black image on white paper.
+- **Margins**: At least 1 inch on all four sides.
+- **Typeface**: Proportionally spaced serif font, 14-point or larger (e.g., Times New Roman, Georgia). Monospaced: no more than 10.5 characters per inch.
+- **Type Style**: Plain, roman style. Italics or boldface for emphasis. Case names italicized or underlined.
+- **Spacing**: Double-spaced body text. Headings, quotations, and footnotes may be single-spaced.
+- **Type-Volume**: Principal brief <= 14,000 words (or 1,300 lines monospaced). Reply/amicus <= 7,000 words (or 650 lines).
+- **Certificate of Compliance**: Required (Form 7) — certifies typeface, type-style, and word/line count.
+- **Pages**: Numbered consecutively.
+- **Electronic Filing**: Filed via EDMS. No physical cover color requirements.
 
-### (b) Appellant's Brief
+### (2) Appellant's Brief
 Must contain, under appropriate headings and in order:
-1. **Table of contents** — with paragraph references
-2. **Table of authorities** — cases alphabetically arranged, statutes, and other authorities, with references to the paragraphs where cited
-3. **Jurisdictional statement** — only for original jurisdiction applications
-4. **Statement of the issues** presented for review
+1. **Table of contents** — with page references
+2. **Table of authorities** — cases alphabetically arranged, statutes, and other authorities, with page references
+3. **Statement of the issues** — each issue must include a preservation citation and the most apposite authority
+4. **Routing statement** — whether case should be retained by Supreme Court or transferred to Court of Appeals (per Rule 6.1101)
 5. **Statement of the case** — nature, course of proceedings, disposition below
-6. **Statement of the facts** — with appropriate references to the record (Rule 28(f))
-7. **Argument**, which must contain:
-   - (A) appellant's contentions with citations to authorities and record
-   - (B) for each issue:
-     - (i) concise statement of the applicable standard of review
-     - (ii) citation to the record showing issue was preserved, or grounds for review if not preserved
-   - (C) if Rule 54(b) appeal, whether certification was appropriate
-   - (D) short conclusion stating the precise relief sought
+6. **Statement of the facts** — with appropriate references to the record (Rule 6.904)
+7. **Argument**, which must contain for each issue:
+   - Scope or standard of review, with supporting authorities
+   - How the issue was preserved for appellate review, with record references
+   - Party's contentions with citations to authorities and record
+8. **Conclusion** — stating the precise relief sought
+9. **Request for oral argument** — or waiver
+10. **Certificate of compliance** — Form 7
+11. **Certificate of filing and service**
+12. **Attached judgment/order** — file-stamped copy via EDMS
 
-### (c) Appellee's Brief
-Must conform to (b), except jurisdictional statement, statement of issues, statement of case, statement of facts, and standard of review need not appear unless appellee is dissatisfied with appellant's statement.
+### (3) Appellee's Brief
+Must conform to (2), except the following need not appear unless the appellee is dissatisfied with the appellant's statement:
+- Statement of the issues
+- Routing statement
+- Statement of the case
+- Statement of the facts
 
-### (d) Reply Brief
-Must contain TOC with paragraph references and TOA with paragraph references.
+### (4) Reply Brief
+Limited to response to new matter in appellee's brief. Must contain TOC with page references and TOA with page references.
 
-### (e) References to Parties
+## Rule 6.904 — References in Briefs
+
+### (1) References to Parties
 Counsel should use parties' actual names or lower court designations, not procedural labels.
 
-### (g) Reproduction of Statutes/Rules
-If the court's determination requires study of statutes, rules, regulations, etc., relevant parts must be set out in the brief or in an addendum.
+### (2) References to the Record
+Citations must use the appendix/transcript format:
+- **(App. pp. ___)** — appendix references
+- **(Tr. p. ___)** — transcript references
+- **(Conf. App. pp. ___)** — confidential appendix references
 
-### (h) Oral Argument Requested
-Party desiring oral argument must place "ORAL ARGUMENT REQUESTED" conspicuously on the cover page.
+### (3) Reproduction of Statutes/Rules
+If the court's determination requires study of statutes, rules, regulations, etc., relevant parts must be set out in the brief or addendum.
 
-### (l) Requirements
-Briefs must be concise, presented with accuracy, logically arranged, free from burdensome, irrelevant or immaterial matters.
+### (4) Transcripts of Oral Rulings
+May not be attached to the brief. Must cite to the transcript in the brief.
 
-## Rule 29 — Brief of an Amicus Curiae
+## Rule 6.906 — Brief of an Amicus Curiae
 
-### (a) During Initial Consideration
-- **(4) Contents and Form**: Must comply with Rules 25 and 32. Must include:
-  - (A) table of contents, with paragraph references
-  - (B) table of authorities with paragraph references
-  - (C) concise statement of identity of amicus and its interest
-  - (D) disclosure: whether party's counsel authored brief, whether party/counsel contributed money, whether other persons contributed money
-- **(5) Length**: No more than one-half the maximum for a party's principal brief (i.e., 19 pages)
+### (1) When Permitted
+Only by leave of court, consent of parties, or at court's request. U.S. and Iowa Attorney General may file without leave.
 
-### (b) During Consideration of Rehearing
-- **(4)** Brief must not exceed 2,600 words
+### (3) Contents
+Must include:
+- Table of contents and table of authorities with page references
+- Statement of identity and interest
+- Disclosure statement (authorship and funding)
+- Argument
 
-## Rule 30 — References to the Record
+### (4) Length
+Not more than 7,000 words (half of principal brief limit).
 
-### (a) In General
-References to evidence or other parts of the record must include a citation to a register of actions index number or recording location. The reference must include information identifying the item (e.g., "Statement of John Doe").
+## Rule 6.907 — Oral Argument
 
-### (b) Form of Citation
-- **(1)** Record citations must use parenthetical format: (R{index}:{page}), e.g. (R156:12). Paragraph or line numbers follow the page number if applicable, e.g. (R156:12:¶3). Multi-case records require full case number on first reference, then last four digits.
-- **(2)** Audio/video references must identify the recording and provide specific time-coded locations.
+### (1) Request
+Must be requested in the brief per Rule 6.903(2)(9). If no request is made, case may be submitted without argument.
 
-## Rule 32 — Form of Briefs and Other Documents
+### (3) Time
+Each side ordinarily allowed 20 minutes.
 
-### (a) Form of a Brief
-- **(1) Reproduction**: Typewritten, printed, or reproduced yielding clear black image on white paper. One side only.
-- **(2) Cover**: Appellant = blue; appellee = red; intervenor/amicus = green; cross-appellee and reply = gray. Rehearing petitions match petitioning party's color.
-- **(3) Binding**: Bound at left, secure, permits lying flat.
-- **(4) Paper Size, Line Spacing, and Margins**: 8.5" x 11" paper. Margins: left >= 1.5", all others >= 1". Pages numbered at bottom (centered or right). Numbering starts on cover with arabic "1" and continues consecutively.
-- **(5) Typeface**: 12pt or larger, max 16 chars/inch. Text double-spaced (headings/quotations may be single-spaced). Footnotes double-spaced, same typeface as text.
-- **(6) Type Styles**: Plain, roman style. Italics/boldface for emphasis. Case names italicized or underlined.
-- **(7) Paragraph Numbers**: Paragraphs numbered with arabic numerals. References to paragraphed documents must use paragraph numbers.
-- **(8) Page Limitations**: Principal brief <= 38 pages, reply <= 12 pages (excluding addendum). Footnotes/endnotes count. Rule 54(b) certification argument <= 5 additional pages.
+## Rule 6.1101 — Routing of Cases
 
-### (d) Certificate of Compliance
-Brief must include a certificate that the document complies with the page limitation, stating the number of pages.
+### (2) Cases Retained by Supreme Court
+- Substantial constitutional questions
+- Substantial issues of enunciating or changing legal principles
+- Fundamental and urgent issues of broad public importance
 
-## Rule 34 — Oral Argument
+### (3) Cases Transferred to Court of Appeals
+- Sufficiency of evidence questions
+- Application of existing law
+- Sentencing issues
+- Procedural matters
 
-### (a)(1) Oral argument generally scheduled unless:
-- (C) no request for oral argument made per Rule 28(h)
+## Confidential Filings
 
-## N.D.R.Ct. 3.4 — Privacy Protection for Filings
+### Redaction Requirements
+- Social Security numbers — last four digits only
+- Financial account numbers — last four digits only
+- Minor names — initials only in juvenile/family cases (Iowa Code ch. 232)
 
-### (b)(1) Redaction Requirements
-Court records containing the following must be redacted:
-- **Social-security / taxpayer-ID numbers** — show only last four digits
-- **Birth dates** — show only year
-- **Minor's names** — use initials only
-- **Financial-account numbers** — show only last four digits
-- **Victim contact information** — redact if victim requests (criminal/delinquency cases)
-
-### (b)(2) Responsibility
-The filing party is solely responsible for ensuring redaction compliance.
-
-### (b)(3) Exemptions
-Redaction not required for: records not publicly accessible under Admin. R. 41, administrative/agency proceedings, previously filed records, filings under 3.4(c), and certain minor-name exceptions (traffic, name change, conservatorship, protection orders, or as ordered by court).
+### Confidential Appendix
+Materials confidential under statute or court order go in the confidential appendix, cited as **(Conf. App. pp. ___)**.

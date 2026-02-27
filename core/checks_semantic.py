@@ -1,7 +1,7 @@
 """Semantic checks using Claude API for appellate brief compliance.
 
 Sends brief text to Claude to evaluate section presence, adequacy,
-and content quality per ND Rules of Appellate Procedure.
+and content quality per Iowa Rules of Appellate Procedure.
 
 Rule text is loaded from bundled files in references/rules/ (relative to
 the project root) and included in the prompt so Claude can verify its
@@ -24,105 +24,125 @@ _PROJECT_RULES_DIR = Path(__file__).resolve().parent.parent / "references" / "ru
 
 # Which rule files are needed for semantic checks
 REQUIRED_RULES = [
-    "rule-28.md",   # N.D.R.App.P. 28 — Briefs
-    "rule-29.md",   # N.D.R.App.P. 29 — Brief of an Amicus Curiae
-    "rule-32.md",   # N.D.R.App.P. 32 — Form of Briefs and Other Documents
-    "rule-34.md",   # N.D.R.App.P. 34 — Oral Argument
-    "rule-30.md",   # N.D.R.App.P. 30 — References to the Record
-    "rule-3.4.md",  # N.D.R.Ct. 3.4 — Privacy Protection for Filings
+    "rule-6.903.md",   # Iowa R. App. P. 6.903 — Briefs
+    "rule-6.904.md",   # Iowa R. App. P. 6.904 — References in Briefs
+    "rule-6.906.md",   # Iowa R. App. P. 6.906 — Amicus Curiae Briefs
+    "rule-6.907.md",   # Iowa R. App. P. 6.907 — Oral Argument
+    "rule-6.1101.md",  # Iowa R. App. P. 6.1101 — Routing of Cases
+    "rule-1.422.md",   # Confidential Filings / Privacy
 ]
 
 # Map of check definitions: (check_id, name, rule, applicable_types, severity, description)
-# Citations verified against the actual ND Rules of Appellate Procedure text.
+# Citations verified against the Iowa Rules of Appellate Procedure.
 SEMANTIC_CHECKS = [
-    # Rule 28(b)(1): "a table of contents, with paragraph references"
-    ("SEC-001", "Table of Contents Present", "28(b)(1)",
+    # Rule 6.903(2)(1): table of contents with page references
+    ("SEC-001", "Table of Contents Present", "6.903(2)(1)",
      None, Severity.REJECT, "Brief must contain a Table of Contents."),
-    ("SEC-002", "TOC Uses Paragraph References", "28(b)(1)",
+    ("SEC-002", "TOC Uses Page References", "6.903(2)(1)",
      None, Severity.CORRECTION,
-     "Table of Contents must use paragraph references, not page numbers alone."),
+     "Table of Contents must include page references."),
 
-    # Rule 28(b)(2): "a table of authorities—cases (alphabetically arranged)...with references to the paragraphs"
-    ("SEC-003", "Table of Authorities Present", "28(b)(2)",
+    # Rule 6.903(2)(2): table of authorities with page references
+    ("SEC-003", "Table of Authorities Present", "6.903(2)(2)",
      None, Severity.REJECT, "Brief must contain a Table of Authorities."),
-    ("SEC-004", "TOA: Cases Alphabetical, Paragraph Refs", "28(b)(2)",
+    ("SEC-004", "TOA: Cases Alphabetical, Page Refs", "6.903(2)(2)",
      None, Severity.CORRECTION,
-     "Table of Authorities must list cases alphabetically with paragraph references."),
+     "Table of Authorities must list cases alphabetically with page references."),
 
-    # Rule 28(b)(3): original jurisdiction statement (not general jurisdictional statement)
-    ("SEC-005", "Jurisdictional Statement", "28(b)(3)",
-     [BriefType.APPELLANT], Severity.CORRECTION,
-     "In an original jurisdiction application, appellant must include a jurisdictional statement."),
-
-    # Rule 28(b)(4): "a statement of the issues presented for review"
-    ("SEC-006", "Statement of Issues", "28(b)(4)",
+    # Rule 6.903(2)(3): statement of the issues presented for review
+    ("SEC-006", "Statement of Issues", "6.903(2)(3)",
      [BriefType.APPELLANT], Severity.REJECT,
      "Appellant brief must include a Statement of the Issues presented for review."),
 
-    # Rule 28(b)(5): "a statement of the case briefly indicating the nature of the case..."
-    ("SEC-007", "Statement of the Case", "28(b)(5)",
+    # Rule 6.903(2)(3): each issue must include preservation citation and most apposite authority
+    ("SEC-006A", "Issues Include Preservation & Authority Citations", "6.903(2)(3)",
      [BriefType.APPELLANT], Severity.CORRECTION,
-     "Appellant brief must include a Statement of the Case (procedural history)."),
+     "Each issue must include a citation to where it was preserved and the most apposite authority."),
 
-    # Rule 28(b)(6): "a statement of the facts relevant to the issues...with appropriate references to the record"
-    ("SEC-008", "Statement of Facts with Record References", "28(b)(6)",
+    # Rule 6.903(2)(4): routing statement
+    ("SEC-016", "Routing Statement", "6.903(2)(4)",
      [BriefType.APPELLANT], Severity.REJECT,
-     "Appellant brief must include a Statement of Facts with record references."),
+     "Appellant brief must include a Routing Statement (retained by Supreme Court or transferred to Court of Appeals)."),
 
-    # Rule 28(b)(7): "the argument"
-    ("SEC-009", "Argument Section Present", "28(b)(7)",
+    # Rule 6.903(2)(5): statement of the case
+    ("SEC-007", "Statement of the Case", "6.903(2)(5)",
+     [BriefType.APPELLANT], Severity.CORRECTION,
+     "Appellant brief must include a Statement of the Case (nature, proceedings, disposition)."),
+
+    # Rule 6.903(2)(6): statement of the facts with record references
+    ("SEC-008", "Statement of Facts with Record References", "6.903(2)(6)",
+     [BriefType.APPELLANT], Severity.REJECT,
+     "Appellant brief must include a Statement of Facts with references to the record."),
+
+    # Rule 6.903(2)(7): argument section
+    ("SEC-009", "Argument Section Present", "6.903(2)(7)",
      [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.AMICUS], Severity.REJECT,
      "Brief must contain an Argument section."),
 
-    # Rule 28(b)(7)(B)(i): "a concise statement of the applicable standard of review"
-    ("SEC-010", "Standard of Review Stated", "28(b)(7)(B)(i)",
+    # Rule 6.903(2)(7): scope/standard of review for each issue
+    ("SEC-010", "Standard/Scope of Review Stated", "6.903(2)(7)",
      [BriefType.APPELLANT], Severity.CORRECTION,
-     "Appellant must state the applicable standard of review for each issue."),
+     "Appellant must state the scope or standard of review for each issue."),
 
-    # Rule 28(b)(7)(B)(ii): "citation to the record showing that the issue was preserved for review"
-    ("SEC-011", "Preservation Citations", "28(b)(7)(B)(ii)",
-     [BriefType.APPELLANT], Severity.NOTE,
-     "Appellant must cite where each issue was preserved for review in the record."),
+    # Rule 6.903(2)(7): preservation of error for each issue
+    ("SEC-017", "Preservation of Error", "6.903(2)(7)",
+     [BriefType.APPELLANT], Severity.CORRECTION,
+     "Appellant must state how each issue was preserved for appellate review with record references."),
 
-    # Rule 28(b)(7)(D): "a short conclusion stating the precise relief sought"
-    ("SEC-012", "Conclusion with Precise Relief", "28(b)(7)(D)",
+    # Rule 6.903(2)(8): conclusion with precise relief
+    ("SEC-012", "Conclusion with Precise Relief", "6.903(2)(8)",
      [BriefType.APPELLANT, BriefType.APPELLEE], Severity.CORRECTION,
      "Brief must include a Conclusion stating the precise relief sought."),
 
-    # Rule 29(a)(4)(C): "a concise statement of the identity of the amicus curiae, and its interest in the case"
-    ("SEC-014", "Amicus: Identity/Interest Statement", "29(a)(4)(C)",
+    # Rule 6.903(2)(9): request for oral argument
+    ("SEC-018", "Request for Oral Argument", "6.903(2)(9)",
+     [BriefType.APPELLANT, BriefType.APPELLEE], Severity.NOTE,
+     "Brief must include a request for oral argument or a waiver of oral argument."),
+
+    # Rule 6.903(1)(i): certificate of compliance
+    ("SEC-013", "Certificate of Compliance", "6.903(1)(i)",
+     None, Severity.CORRECTION,
+     "Brief must include a Certificate of Compliance with typeface and type-volume requirements."),
+
+    # Rule 6.903(2)(11): certificate of filing and service
+    ("SEC-019", "Certificate of Filing/Service", "6.903(2)(11)",
+     None, Severity.CORRECTION,
+     "Brief must include a Certificate of Filing and Service."),
+
+    # Rule 6.906(3)(C): amicus identity and interest statement
+    ("SEC-014", "Amicus: Identity/Interest Statement", "6.906(3)",
      [BriefType.AMICUS], Severity.REJECT,
      "Amicus brief must include a statement of identity and interest."),
 
-    # Rule 29(a)(4)(D): disclosure of authorship and funding
-    ("SEC-015", "Amicus: Disclosure Statement", "29(a)(4)(D)",
+    # Rule 6.906(3)(D): amicus disclosure statement
+    ("SEC-015", "Amicus: Disclosure Statement", "6.906(3)",
      [BriefType.AMICUS], Severity.CORRECTION,
      "Amicus brief must include a disclosure statement (authorship and funding)."),
 
-    # Rule 28(e): "counsel should use the parties' actual names or the designations used in the lower court"
-    ("CNT-001", "Party References Use Actual Names", "28(e)",
+    # Rule 6.904(1): party references use actual names
+    ("CNT-001", "Party References Use Actual Names", "6.904(1)",
      None, Severity.CORRECTION,
      "Parties should be referred to by actual names, not procedural labels like 'Appellant.'"),
 
-    # Rule 28(l): "must be concise...free from burdensome, irrelevant or immaterial matters"
-    ("CNT-002", "Brief Is Concise, No Irrelevant Matter", "28(l)",
+    # General: brief conciseness
+    ("CNT-002", "Brief Is Concise, No Irrelevant Matter", "6.903",
      None, Severity.NOTE,
      "Brief must be concise and free of irrelevant, immaterial, or scandalous matter."),
 
-    # Rule 28(g): "the relevant parts must be set out in the brief or in an addendum"
-    ("CNT-003", "Statutes/Rules in Brief or Addendum", "28(g)",
+    # Rule 6.904(3): statutes/rules in brief or addendum
+    ("CNT-003", "Statutes/Rules in Brief or Addendum", "6.904(3)",
      None, Severity.NOTE,
      "Pertinent statutes and rules must be set forth in the brief or addendum."),
 
-    # Rule 30(b)(1): record citations should use (R{index}:{page}) format
-    ("REC-002", "Record Citation Format", "30(b)(1)",
+    # Rule 6.904(2): record citation format (App. pp. ___)
+    ("REC-002", "Record Citation Format", "6.904(2)",
      [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.CROSS_APPEAL], Severity.CORRECTION,
-     "Record citations should use the (R{index}:{page}) format per Rule 30(b)(1)."),
+     "Record citations should use the (App. pp. ___) or (Tr. p. ___) format per Rule 6.904(2)."),
 
-    # Rule 30(a): record references should identify the item cited
-    ("REC-003", "Record Citations Identify Items", "30(a)",
+    # Rule 6.904(2): record citations identify items
+    ("REC-003", "Record Citations Identify Items", "6.904(2)",
      [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.CROSS_APPEAL], Severity.NOTE,
-     "Record references should include information identifying the item cited, e.g. 'Statement of John Doe.'"),
+     "Record references should provide enough context to identify what is being cited."),
 ]
 
 
@@ -196,8 +216,8 @@ def run_semantic_checks(
     if len(brief_text) > 60000:
         brief_text = brief_text[:60000] + "\n\n[TEXT TRUNCATED]"
 
-    prompt = f"""You are a legal compliance reviewer for the North Dakota Supreme Court.
-Analyze the following appellate brief for compliance with the ND Rules of Appellate Procedure.
+    prompt = f"""You are a legal compliance reviewer for the Iowa Supreme Court and Iowa Court of Appeals.
+Analyze the following appellate brief for compliance with the Iowa Rules of Appellate Procedure.
 
 Brief type: {metadata.brief_type.value}
 Total pages: {metadata.total_pages}
@@ -228,52 +248,49 @@ Checks to evaluate:
 Return ONLY a JSON array with objects having these fields:
 - "id": the check ID
 - "passed": true or false
-- "rule": the correct rule citation (verify against the rule text above — use the exact
-  subdivision numbering from the rule text, e.g. "28(b)(1)" not "28(a)(1)")
+- "rule": the correct rule citation (verify against the rule text above)
 - "message": a one-sentence explanation of the finding
 - "details": optional additional detail (null if none)
 
 Evaluation guidance:
-- SEC-001: Rule 28(b)(1) requires "a table of contents, with paragraph references."
+- SEC-001: Rule 6.903(2)(1) requires a table of contents with page references.
   Look for a Table of Contents section.
-- SEC-002: Rule 28(b)(1) requires the TOC to use "paragraph references" — check whether
-  the TOC references paragraph numbers (¶ or [1], [2], etc.) rather than only page numbers.
-- SEC-003: Rule 28(b)(2) requires "a table of authorities—cases (alphabetically arranged),
-  statutes, and other authorities—with references to the paragraphs in the brief."
-- SEC-004: Check if cases in the TOA are alphabetical and use paragraph references per 28(b)(2).
-- SEC-005: Rule 28(b)(3) applies only to original jurisdiction applications. If this is a
-  standard appeal (not original jurisdiction), it passes automatically.
-- SEC-006: Rule 28(b)(4) requires "a statement of the issues presented for review."
-- SEC-007: Rule 28(b)(5) requires "a statement of the case briefly indicating the nature
-  of the case, the course of the proceedings, and the disposition below."
-- SEC-008: Rule 28(b)(6) requires "a statement of the facts relevant to the issues...with
-  appropriate references to the record (see Rule 28(f))." Look for record references
-  like "App. 15", "Doc. 23", or similar citations to the appendix/record.
-- SEC-009: Rule 28(b)(7) requires "the argument." Look for a substantive Argument section.
-- SEC-010: Rule 28(b)(7)(B)(i) requires "a concise statement of the applicable standard
-  of review" for each issue.
-- SEC-011: Rule 28(b)(7)(B)(ii) requires "citation to the record showing that the issue
-  was preserved for review; or a statement of grounds for seeking review of an issue not preserved."
-- SEC-012: Rule 28(b)(7)(D) requires "a short conclusion stating the precise relief sought."
-- SEC-014: Rule 29(a)(4)(C) requires "a concise statement of the identity of the amicus
-  curiae, and its interest in the case."
-- SEC-015: Rule 29(a)(4)(D) requires a disclosure statement about authorship and funding.
-- CNT-001: Rule 28(e) says "counsel should use the parties' actual names or the designations
-  used in the lower court." Check if parties are referred to by name rather than "Appellant"/"Appellee."
-- CNT-002: Rule 28(l) requires briefs to be "concise...free from burdensome, irrelevant
-  or immaterial matters."
-- CNT-003: Rule 28(g) requires that if "the court's determination of the issues presented
-  requires the study of statutes, rules, regulations, etc., the relevant parts must be set
-  out in the brief or in an addendum."
-- REC-002: Rule 30(b)(1) requires record citations in the format (R{{index}}:{{page}}), e.g.
-  (R156:12). Check whether record references in the brief consistently use this format. Note
-  any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead of the
-  required (R#:#) format. If the brief uses a mix of formats, note which are non-compliant.
-- REC-003: Rule 30(a) requires that record references include "information identifying the
-  item," e.g. "Statement of John Doe." Check whether the brief's record citations provide
-  enough context to identify what is being cited, either in the text surrounding the citation
-  or in the citation itself. Bare citations like (R12:5) with no surrounding context about
-  what the item is should be flagged.
+- SEC-002: Rule 6.903(2)(1) requires the TOC to use page references. Iowa uses page
+  references (not paragraph references). Check that the TOC entries
+  include page numbers.
+- SEC-003: Rule 6.903(2)(2) requires a table of authorities with page references.
+- SEC-004: Check if cases in the TOA are alphabetical and use page references per 6.903(2)(2).
+- SEC-006: Rule 6.903(2)(3) requires a statement of the issues presented for review.
+- SEC-006A: Rule 6.903(2)(3) requires each issue to include a citation to where it was
+  preserved in the district court record AND the most apposite authority. Check both.
+- SEC-016: Rule 6.903(2)(4) requires a routing statement indicating whether the case
+  should be retained by the supreme court or transferred to the court of appeals, per
+  the criteria in Iowa R. App. P. 6.1101(2) and (3). This is an Iowa-specific requirement.
+- SEC-007: Rule 6.903(2)(5) requires a statement of the case (nature, proceedings, disposition).
+- SEC-008: Rule 6.903(2)(6) requires a statement of the facts with record references
+  (App. pp. ___, Tr. p. ___, etc.).
+- SEC-009: Rule 6.903(2)(7) requires an argument section.
+- SEC-010: Rule 6.903(2)(7) requires a scope or standard of review for each issue,
+  with supporting authorities.
+- SEC-017: Rule 6.903(2)(7) requires a statement of how each issue was preserved for
+  appellate review, with references to the record where the issue was raised and decided.
+  This is the "preservation of error" requirement.
+- SEC-012: Rule 6.903(2)(8) requires a short conclusion stating the precise relief sought.
+- SEC-018: Rule 6.903(2)(9) requires either a request for oral argument or a statement
+  that oral argument is not requested.
+- SEC-013: Rule 6.903(1)(i) requires a certificate of compliance with typeface and
+  type-volume requirements (Form 7).
+- SEC-019: Rule 6.903(2)(11) requires a certificate of filing and service.
+- SEC-014: Rule 6.906(3) requires amicus to include identity and interest statement.
+- SEC-015: Rule 6.906(3) requires amicus disclosure statement (authorship and funding).
+- CNT-001: Rule 6.904(1) says counsel should use parties' actual names, not procedural labels.
+- CNT-002: Brief should be concise and free of irrelevant matter.
+- CNT-003: Rule 6.904(3) requires relevant statutes/rules in the brief or addendum.
+- REC-002: Rule 6.904(2) requires record citations in the format (App. pp. ___) for
+  appendix references and (Tr. p. ___) for transcript references. Check whether the
+  brief consistently uses these formats.
+- REC-003: Rule 6.904(2) requires record references to provide context identifying
+  what is being cited.
 
 Return ONLY valid JSON, no markdown formatting."""
 

@@ -192,7 +192,7 @@ class TestCheckRuleStaleness:
         })
         assert result is not None
         assert "91 days ago" in result
-        assert "ndcourts.gov" in result
+        assert "Iowa Legislature" in result
 
     def test_warns_when_very_stale(self):
         old_date = (date.today() - timedelta(days=365)).isoformat()
@@ -304,7 +304,7 @@ class TestGetVersionWarnings:
             warnings = get_version_warnings(check_remote=False)
             assert len(warnings) >= 2
             has_hash_warning = any("modified" in w or "mismatch" in w for w in warnings)
-            has_stale_warning = any("ndcourts.gov" in w for w in warnings)
+            has_stale_warning = any("Iowa Legislature" in w for w in warnings)
             assert has_hash_warning
             assert has_stale_warning
 

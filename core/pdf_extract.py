@@ -141,7 +141,7 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
     """Compute margins in inches from text block positions.
 
     Page-number blocks in the bottom zone are excluded from the bottom margin
-    calculation.  Rule 32(a)(4) requires 1" margins but is silent on page
+    calculation.  Rule 6.903(1)(d) requires 1" margins but is silent on page
     numbers; we allow page numbers (and only page numbers) to appear within
     the bottom margin zone.
     """

@@ -86,7 +86,7 @@ def _claude_weighting_pass(
         for r in failed
     ], indent=2)
 
-    prompt = f"""You are a clerk at the North Dakota Supreme Court reviewing an appellate brief
+    prompt = f"""You are a clerk at the Iowa Supreme Court reviewing an appellate brief
 compliance report. Based on the following findings, provide your assessment.
 
 Current hard-rule recommendation: {hard_rec.value}

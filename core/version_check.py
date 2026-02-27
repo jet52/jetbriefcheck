@@ -88,8 +88,8 @@ def check_rule_staleness(local_version: dict) -> Optional[str]:
     if age_days > max_days:
         return (
             f"Bundled rules were last verified {age_days} days ago "
-            f"({verified_str}). Consider checking ndcourts.gov for amendments "
-            f"to Rules 28, 29, 30, 32, 34, and 3.4."
+            f"({verified_str}). Consider checking the Iowa Legislature website "
+            f"for amendments to Rules 6.903, 6.904, 6.906, 6.907, and 6.1101."
         )
     return None
 
@@ -128,7 +128,7 @@ def check_remote_version(local_version: dict, timeout: float = 2.0) -> list[str]
         messages.append(
             f"A newer version of the brief compliance skill is available: "
             f"v{remote_ver} (you have v{local_ver}). "
-            f"Visit https://github.com/jet52/jetbriefcheck for updates."
+            f"Visit the project repository for updates."
         )
 
     # Check if remote has newer rule hashes (rules updated upstream)

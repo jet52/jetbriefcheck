@@ -1,4 +1,4 @@
-"""Rule thresholds and patterns for ND Rules of Appellate Procedure compliance."""
+"""Rule thresholds and patterns for Iowa Rules of Appellate Procedure compliance."""
 
 from core.models import BriefType
 
@@ -8,19 +8,22 @@ PAPER_HEIGHT = 11.0
 PAPER_TOLERANCE = 0.1  # allow small deviation
 
 # --- Margin minimums (inches) ---
-MIN_LEFT_MARGIN = 1.5
+# Iowa R. App. P. 6.903(1)(d): at least 1 inch on all sides
+MIN_LEFT_MARGIN = 1.0
 MIN_RIGHT_MARGIN = 1.0
 MIN_TOP_MARGIN = 1.0
 MIN_BOTTOM_MARGIN = 1.0
 MARGIN_TOLERANCE = 0.05  # small tolerance for measurement imprecision
 
 # --- Font ---
-MIN_FONT_SIZE_PT = 12.0
-MAX_CHARS_PER_INCH = 16
+# Iowa R. App. P. 6.903(1)(e): 14-point proportionally spaced serif typeface,
+# or monospaced typeface no more than 10.5 characters per inch
+MIN_FONT_SIZE_PT = 14.0
+MAX_CHARS_PER_INCH = 10  # monospaced: 10.5 cpi max, rounded down for safety
 FONT_SIZE_TOLERANCE = 0.3  # pt tolerance for font size detection
 FONT_NONCOMPLIANT_THRESHOLD = 10  # chars per page: >= this count is REJECT, below is NOTE
 
-# Small caps detection — Rule 32(a)(5) font size check should not penalize
+# Small caps detection — font size check should not penalize
 # conventional small-caps formatting (headings, citations, cover page, signatures).
 SMALL_CAPS_SIZE_RATIO_MIN = 0.55  # smallest ratio of span size to body font
 SMALL_CAPS_SIZE_RATIO_MAX = 0.85  # largest ratio (above this it's near full-size)
@@ -28,50 +31,70 @@ SMALL_CAPS_SUSPICIOUS_PAGE_PCT = 15.0  # % of page chars; above this, small caps
                                         # non-conventional pages are treated as body text
 
 # --- Spacing ---
-# Double spacing is ~24pt between baselines for 12pt text.
-# We allow some tolerance: anything >= 20pt is "double-spaced."
-MIN_DOUBLE_SPACE_PTS = 20.0
+# Double spacing is ~28pt between baselines for 14pt text.
+# We allow some tolerance: anything >= 24pt is "double-spaced."
+MIN_DOUBLE_SPACE_PTS = 24.0
 
-# --- Page limits ---
-PAGE_LIMITS = {
-    BriefType.APPELLANT: 38,
-    BriefType.APPELLEE: 38,
-    BriefType.CROSS_APPEAL: 38,
-    BriefType.REPLY: 12,
-    BriefType.AMICUS: 19,
+# --- Word count limits ---
+# Iowa R. App. P. 6.903(1)(g)(1): type-volume limitations by word count
+# (for proportionally spaced typeface)
+WORD_LIMITS = {
+    BriefType.APPELLANT: 14000,
+    BriefType.APPELLEE: 14000,
+    BriefType.CROSS_APPEAL: 14000,
+    BriefType.REPLY: 7000,
+    BriefType.AMICUS: 7000,
 }
 
-# Word limit for amicus rehearing brief
-AMICUS_REHEARING_WORD_LIMIT = 2600
+# Iowa does not use page limits; word count is the primary length constraint.
+# We keep PAGE_LIMITS for backward compatibility but set them to None.
+PAGE_LIMITS = {
+    BriefType.APPELLANT: None,
+    BriefType.APPELLEE: None,
+    BriefType.CROSS_APPEAL: None,
+    BriefType.REPLY: None,
+    BriefType.AMICUS: None,
+}
 
-# --- Cover color by brief type ---
-# Rule 32(a)(2): colors for brief covers
+# Line limits for monospaced typeface briefs
+# Iowa R. App. P. 6.903(1)(g)(2)
+LINE_LIMITS = {
+    BriefType.APPELLANT: 1300,
+    BriefType.APPELLEE: 1300,
+    BriefType.CROSS_APPEAL: 1300,
+    BriefType.REPLY: 650,
+    BriefType.AMICUS: 650,
+}
+
+# --- Cover colors ---
+# Iowa files briefs electronically via EDMS; no physical cover color requirement.
+# The court affixes covers for printed copies. We keep the dict for compatibility
+# but mark all as None (no color check performed).
 COVER_COLORS = {
-    BriefType.APPELLANT: "blue",
-    BriefType.APPELLEE: "red",
-    BriefType.REPLY: "gray",
-    BriefType.CROSS_APPEAL: "gray",
-    BriefType.AMICUS: "green",
+    BriefType.APPELLANT: None,
+    BriefType.APPELLEE: None,
+    BriefType.REPLY: None,
+    BriefType.CROSS_APPEAL: None,
+    BriefType.AMICUS: None,
 }
 
 # --- Section heading patterns ---
 # Regex patterns to detect key brief sections in text.
-# Used by both mechanical and semantic checks.
+# Updated for Iowa-specific section names.
 SECTION_PATTERNS = {
     "table_of_contents": r"(?i)table\s+of\s+contents",
     "table_of_authorities": r"(?i)table\s+of\s+authorities",
-    "jurisdictional_statement": r"(?i)jurisdictional\s+statement|statement\s+of\s+jurisdiction",
+    "routing_statement": r"(?i)routing\s+statement",
     "statement_of_issues": r"(?i)statement\s+of\s+(the\s+)?issues?|issues?\s+presented",
     "statement_of_case": r"(?i)statement\s+of\s+(the\s+)?case",
     "statement_of_facts": r"(?i)statement\s+of\s+(the\s+)?facts",
     "argument": r"(?i)^argument\b|\bargument\s*$",
-    "standard_of_review": r"(?i)standard\s+of\s+review",
+    "standard_of_review": r"(?i)standard\s+of\s+review|scope\s+of\s+review",
+    "preservation_of_error": r"(?i)preserv(ation|ed)\s+(of\s+)?error|error\s+preserv(ation|ed)",
     "conclusion": r"(?i)^conclusion\b|\bconclusion\s*$",
     "certificate_of_compliance": r"(?i)certificate\s+of\s+compliance",
-    "addendum": r"(?i)^addendum\b|\baddendum\s*$",
+    "request_for_oral_argument": r"(?i)(request\s+for\s+)?oral\s+argument",
+    "certificate_of_filing": r"(?i)certificate\s+of\s+(filing|service)",
 }
 
 # Brief type detection is handled in brief_classifier.py with fuzzy matching.
-
-# --- Addendum detection ---
-ADDENDUM_PATTERN = r"(?i)^\s*addendum\s*$"
