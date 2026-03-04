@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 1.6.1
+version: 1.7.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -30,6 +30,24 @@ Analyzes an appellate brief PDF against the North Dakota Rules of Appellate Proc
 
 This skill is self-contained. All rule text and check definitions are bundled below — no external file reads are required.
 
+## Platform Detection
+
+At the start of each CLI session, set variables for platform-dependent paths. **Do not use `$(uname)` or other command substitution** — it triggers unnecessary permission prompts. Instead, check for platform-specific files directly:
+
+```bash
+VENV_PYTHON=~/.claude/skills/jetbriefcheck/.venv/bin/python
+if [ -f ~/.claude/skills/jetbriefcheck/.venv/Scripts/python.exe ]; then
+  VENV_PYTHON=~/.claude/skills/jetbriefcheck/.venv/Scripts/python.exe
+fi
+```
+
+If running in **PowerShell** (Windows without Git Bash):
+```powershell
+$VENV_PYTHON = "$HOME\.claude\skills\jetbriefcheck\.venv\Scripts\python.exe"
+```
+
+Use `$VENV_PYTHON` in all subsequent commands instead of hardcoded `python3`.
+
 ## Workflow
 
 The user uploads a PDF via drag-and-drop. Save the uploaded file to a temporary location, then execute the phases below.
@@ -50,7 +68,7 @@ All intermediate and output files use the PDF stem in their names to avoid colli
 Run the check script in mechanical-only mode. This makes **no API calls**:
 
 ```bash
-python3 scripts/check_brief.py "<filename>.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus]
+$VENV_PYTHON scripts/check_brief.py "<filename>.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus]
 ```
 
 - **If the script succeeds**: Capture the intermediate JSON file path from stdout. Continue to **Phase 2 (Full Mode)**.
@@ -100,7 +118,7 @@ The severity values must be lowercase: `"reject"`, `"correction"`, or `"note"`.
 Run the report builder to merge results and generate the HTML report:
 
 ```bash
-python3 scripts/build_report.py \
+$VENV_PYTHON scripts/build_report.py \
   --intermediate "<intermediate-json-path>" \
   --semantic "<semantic-json-path>"
 ```
