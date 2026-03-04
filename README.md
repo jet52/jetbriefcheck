@@ -149,12 +149,18 @@ Each failed check shows:
 
 The checker evaluates compliance against these North Dakota rules:
 
+**N.D.R.App.P. (Rules of Appellate Procedure):**
+- **Rule 14** — Identity protection (initials for protected individuals)
+- **Rule 21** — Writs (petition content and supporting documents)
 - **Rule 28** — Required contents of briefs (sections, formatting of arguments, etc.)
 - **Rule 29** — Requirements for amicus curiae briefs
 - **Rule 30** — How to cite the record
 - **Rule 32** — Physical formatting (paper size, margins, fonts, spacing, page limits, cover requirements)
 - **Rule 34** — Oral argument notation on the cover
+
+**N.D.R.Ct. (Rules of Court):**
 - **Rule 3.4** — Privacy protection for personal identifiers in filings
+- **Rule 11.6** — Medium-neutral case citations
 
 ---
 
@@ -199,12 +205,15 @@ The full text of the following rules is bundled in `references/rules/`:
 
 | File | Rule | Subject |
 |------|------|---------|
+| `rule-14.md` | N.D.R.App.P. 14 | Identity Protection |
+| `rule-21.md` | N.D.R.App.P. 21 | Writs |
 | `rule-28.md` | N.D.R.App.P. 28 | Briefs |
 | `rule-29.md` | N.D.R.App.P. 29 | Brief of an Amicus Curiae |
 | `rule-30.md` | N.D.R.App.P. 30 | References to the Record |
 | `rule-32.md` | N.D.R.App.P. 32 | Form of Briefs and Other Documents |
 | `rule-34.md` | N.D.R.App.P. 34 | Oral Argument |
 | `rule-3.4.md` | N.D.R.Ct. 3.4 | Privacy Protection for Filings |
+| `rule-11.6.md` | N.D.R.Ct. 11.6 | Medium-Neutral Case Citations |
 
 Rules were last copied from the authoritative source on **2026-02-17**.
 

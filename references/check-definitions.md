@@ -1,6 +1,6 @@
 # Brief Compliance Check Definitions
 
-All citations verified against the ND Rules of Appellate Procedure text.
+All citations verified against the ND Rules of Appellate Procedure and ND Rules of Court.
 
 ## Mechanical Checks (Deterministic)
 
@@ -29,6 +29,7 @@ These are run by `check_brief.py` — no changes needed here.
 | CNT-004 | Paragraphs numbered (arabic numerals) | 32(a)(7) | CORRECTION |
 | SEC-013 | Certificate of Compliance present | 32(d) | CORRECTION |
 | REC-001 | Record citations present (R#:#) format | 30(a) | NOTE |
+| CIT-001 | ND case citations: medium-neutral format | N.D.R.Ct. 11.6(b) | CORRECTION |
 
 ## Semantic Checks (Claude Code Evaluation)
 
@@ -37,12 +38,14 @@ These checks are evaluated by Claude Code during the skill workflow. For each ch
 ### Applicability by Brief Type
 
 Before evaluating, filter checks by brief type:
-- **All types**: SEC-001 through SEC-004, CNT-001, CNT-002, CNT-003, PRV-001
+- **All types**: SEC-001 through SEC-004, CNT-001, CNT-002, CNT-003, PRV-001, PRV-002 through PRV-006, WRT-001 through WRT-003, CIT-002
 - **Appellant only**: SEC-005, SEC-006, SEC-007, SEC-008, SEC-010, SEC-011
 - **Appellant + Appellee + Amicus**: SEC-009
 - **Appellant + Appellee**: SEC-012
 - **Appellant + Appellee + Cross-appeal**: REC-002, REC-003
 - **Amicus only**: SEC-014, SEC-015
+
+Note: PRV-002–006, WRT-001–003, and CIT-002 are applicable to all brief types but auto-pass when the case type or document type doesn't trigger them (e.g., WRT checks auto-pass if the document is not a writ petition).
 
 If a check is not applicable to the brief type, mark it as `"passed": true, "applicable": false` with message "Not applicable to {brief_type} briefs."
 
@@ -175,6 +178,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 #### PRV-001 — Privacy: Minor Names Redacted
 **Rule**: N.D.R.Ct. 3.4(b)(1)(C) — "the name of an individual known to be a minor" must be redacted to "the minor's initials"
+**Cross-reference**: Rule 14(a)(5) also requires minor children to be referred to by initials. PRV-001 covers this obligation under both rules.
 **Look for**: Whether the brief uses the full first or last name of any individual known to be a minor. Minors should be identified only by initials (e.g., "H.R.", "A.R.") throughout the brief. Check for inconsistent usage where initials are used in some places but full names appear elsewhere.
 **Pass if**: All minors are consistently referred to by initials only. Using initials with periods (e.g., "H.R.") or without (e.g., "HR") is acceptable.
 **Fail if**: A minor's full first name, last name, or both appear anywhere in the brief text (excluding the cover page party caption, where the parent's name naturally appears). Common indicators: the brief uses initials for a minor in most places but slips into using the actual name in others.
@@ -195,6 +199,71 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Pass if**: Record citations are generally accompanied by identifying context (e.g., "Dr. Smith's deposition (R45:12)", "the district court's order (R102:1)").
 **Fail if**: Many citations are bare references like (R12:5) with no surrounding context about what the item is.
 **Note**: Be somewhat lenient — if the context is clear from the surrounding sentence, the citation need not repeat the identification.
+**Severity**: NOTE
+
+#### PRV-002 — Identity Protection: Mental Health Respondent
+**Rule**: 14(a)(1) — respondent in a mental health proceeding must be referred to by initials only
+**Look for**: First determine if this is a mental health case (indicators: "mental health commitment", "treatment order", N.D.C.C. ch. 25-03.1). If not, pass automatically. If it is, check whether the respondent's full name appears anywhere — it should be initials only.
+**Pass if**: Not a mental health case, OR respondent consistently uses initials.
+**Fail if**: Mental health case and respondent's full name appears.
+**Severity**: CORRECTION
+
+#### PRV-003 — Identity Protection: Guardianship/Conservatorship
+**Rule**: 14(a)(2) — respondent and family members in guardianship/conservatorship must use initials
+**Look for**: Determine if this is a guardianship or conservatorship case. If not, pass automatically. If it is, check that the respondent and family members use initials only.
+**Pass if**: Not a guardianship/conservatorship case, OR all protected individuals use initials.
+**Fail if**: Guardianship/conservatorship case and protected individuals' names appear.
+**Severity**: CORRECTION
+
+#### PRV-004 — Identity Protection: Juvenile Respondent
+**Rule**: 14(a)(3) — respondent in a juvenile proceeding must use initials
+**Look for**: Determine if this is a juvenile case (indicators: "juvenile", "delinquent", N.D.C.C. ch. 27-20). If not, pass automatically. If it is, check that the juvenile respondent uses initials.
+**Pass if**: Not a juvenile case, OR juvenile respondent consistently uses initials.
+**Fail if**: Juvenile case and respondent's full name appears.
+**Severity**: CORRECTION
+
+#### PRV-005 — Identity Protection: TPR Proceedings
+**Rule**: 14(a)(4) — child and family members in TPR proceedings must use initials
+**Look for**: Determine if this is a termination of parental rights case ("TPR", "termination of parental rights"). If not, pass automatically. If it is, check that the child and family members use initials.
+**Pass if**: Not a TPR case, OR all protected individuals use initials.
+**Fail if**: TPR case and protected individuals' full names appear.
+**Severity**: CORRECTION
+
+#### PRV-006 — Identity Protection: Sexual Offense Victim
+**Rule**: 14(a)(6) — victim or alleged victim of a sexual offense must use initials
+**Look for**: Determine if the case involves a sexual offense (sexual assault, rape, gross sexual imposition, N.D.C.C. ch. 12.1-20). If not, pass automatically. If it is, check that the victim is referred to by initials only.
+**Pass if**: Not a sexual offense case, OR victim consistently uses initials.
+**Fail if**: Sexual offense case and victim's full name appears.
+**Severity**: CORRECTION
+
+#### WRT-001 — Writ Petition: Required Content
+**Rule**: 21(a)(2) — petition must state relief sought, issues, facts, and reasons
+**Look for**: First determine if this is a writ petition (indicators: "supervisory writ", "writ of mandamus", "writ of prohibition", "extraordinary writ"). If not, pass automatically. If it is, check that the petition states (A) relief sought, (B) issues presented, (C) necessary facts, and (D) reasons why a writ should issue.
+**Pass if**: Not a writ petition, OR all four elements are present.
+**Fail if**: Writ petition missing one or more required elements.
+**Severity**: CORRECTION
+
+#### WRT-002 — Writ Petition: Supporting Documents
+**Rule**: 21(a)(3) — petition must include supporting documents
+**Look for**: If not a writ petition, pass automatically. If it is, check whether supporting documents (orders, record excerpts) are referenced or attached as exhibits.
+**Pass if**: Not a writ petition, OR supporting documents are included.
+**Fail if**: Writ petition with no supporting documents referenced.
+**Severity**: CORRECTION
+
+#### WRT-003 — Writ Petition: Exhibit Citation Format
+**Rule**: 21(a)(3)(B) — supporting documents should use (E{page}:{line/para}) format
+**Look for**: If not a writ petition, pass automatically. If it is, check whether exhibit citations use the (E#:#) format, e.g. (E6:12:¶3).
+**Pass if**: Not a writ petition, OR exhibit citations use proper format.
+**Fail if**: Writ petition with exhibit citations not using (E#:#) format.
+**Note**: This is advisory — the format is recommended, not strictly required.
+**Severity**: NOTE
+
+#### CIT-002 — ND Case Citations: Pre/Post-1997 Compliance
+**Rule**: N.D.R.Ct. 11.6 — medium-neutral citations required for post-1997 ND opinions
+**Look for**: Whether the brief correctly applies the pre-1997 vs post-1997 distinction. Post-1997 opinions must include "YYYY ND ##" format. Pre-1997 opinions need only the N.W.2d citation.
+**Pass if**: Citations correctly distinguish pre- and post-1997 cases.
+**Fail if**: Post-1997 cases cited without medium-neutral format, or other misapplication of the rule.
+**Note**: Be lenient — this is an advisory check. CIT-001 (mechanical) catches the most obvious violations.
 **Severity**: NOTE
 
 ## Recommendation Logic

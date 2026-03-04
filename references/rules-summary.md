@@ -98,3 +98,34 @@ The filing party is solely responsible for ensuring redaction compliance.
 
 ### (b)(3) Exemptions
 Redaction not required for: records not publicly accessible under Admin. R. 41, administrative/agency proceedings, previously filed records, filings under 3.4(c), and certain minor-name exceptions (traffic, name change, conservatorship, protection orders, or as ordered by court).
+
+## Rule 14 — Identity Protection
+
+### (a) Form of Confidential References
+In all filed documents, at oral argument, and in opinions, the following individuals may not be referred to by name but may be referred to by initials:
+1. **Respondent in mental health proceeding**
+2. **Respondent and family in guardianship/conservatorship**
+3. **Respondent in juvenile proceeding**
+4. **Child and family in TPR (termination of parental rights) proceedings**
+5. **Minor child** (overlaps with N.D.R.Ct. 3.4(b)(1)(C))
+6. **Victim or alleged victim of a sexual offense**
+
+### (b) Other Privacy Protection
+Privacy protections in N.D.R.Ct. 3.4, N.D.C.C., and the ND Constitution must be complied with in all filings, at oral argument, and in opinions.
+
+## Rule 21 — Writs
+
+### (a) Petition, Filing, and Service
+- **(2) Required content**: Petition must state (A) relief sought, (B) issues presented, (C) facts necessary to understand the issues, and (D) reasons why a writ should issue.
+- **(3) Supporting documents**: Must include orders, parts of the record, or other documents. Supporting documents attached as exhibits; cited using (E{page}:{line/para}) format, e.g. (E6:12:¶3).
+
+### (c) Form
+Petition must contain all applicable items from Rule 28(b) and conform to Rules 25 and 32.
+
+## N.D.R.Ct. 11.6 — Medium-Neutral Case Citations
+
+### (a) Citations Before January 1, 1997
+Pre-1997 ND Supreme Court opinions must include a reference to the N.W. Reporter volume and page number. No medium-neutral citation is required.
+
+### (b) Citations After January 1, 1997
+Post-1997 opinions must include the medium-neutral citation: calendar year + "ND" (or "ND App" for court of appeals) + sequential number, e.g., "2005 ND 123, ¶ 15." Must also include the N.W.2d volume and page when available. Subsequent citations use paragraph number with sufficient reference to identify the initial citation.

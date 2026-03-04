@@ -24,12 +24,15 @@ _PROJECT_RULES_DIR = Path(__file__).resolve().parent.parent / "references" / "ru
 
 # Which rule files are needed for semantic checks
 REQUIRED_RULES = [
-    "rule-28.md",   # N.D.R.App.P. 28 — Briefs
-    "rule-29.md",   # N.D.R.App.P. 29 — Brief of an Amicus Curiae
-    "rule-32.md",   # N.D.R.App.P. 32 — Form of Briefs and Other Documents
-    "rule-34.md",   # N.D.R.App.P. 34 — Oral Argument
-    "rule-30.md",   # N.D.R.App.P. 30 — References to the Record
-    "rule-3.4.md",  # N.D.R.Ct. 3.4 — Privacy Protection for Filings
+    "rule-28.md",    # N.D.R.App.P. 28 — Briefs
+    "rule-29.md",    # N.D.R.App.P. 29 — Brief of an Amicus Curiae
+    "rule-32.md",    # N.D.R.App.P. 32 — Form of Briefs and Other Documents
+    "rule-34.md",    # N.D.R.App.P. 34 — Oral Argument
+    "rule-30.md",    # N.D.R.App.P. 30 — References to the Record
+    "rule-3.4.md",   # N.D.R.Ct. 3.4 — Privacy Protection for Filings
+    "rule-14.md",    # N.D.R.App.P. 14 — Identity Protection
+    "rule-21.md",    # N.D.R.App.P. 21 — Writs
+    "rule-11.6.md",  # N.D.R.Ct. 11.6 — Medium-Neutral Case Citations
 ]
 
 # Map of check definitions: (check_id, name, rule, applicable_types, severity, description)
@@ -123,6 +126,51 @@ SEMANTIC_CHECKS = [
     ("REC-003", "Record Citations Identify Items", "30(a)",
      [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.CROSS_APPEAL], Severity.NOTE,
      "Record references should include information identifying the item cited, e.g. 'Statement of John Doe.'"),
+
+    # Rule 14(a)(1): mental health respondent identity protection
+    ("PRV-002", "Identity Protection: Mental Health Respondent", "14(a)(1)",
+     None, Severity.CORRECTION,
+     "Mental health respondents must be referred to by initials only."),
+
+    # Rule 14(a)(2): guardianship/conservatorship identity protection
+    ("PRV-003", "Identity Protection: Guardianship/Conservatorship", "14(a)(2)",
+     None, Severity.CORRECTION,
+     "Respondent and family members in guardianship/conservatorship must use initials."),
+
+    # Rule 14(a)(3): juvenile respondent identity protection
+    ("PRV-004", "Identity Protection: Juvenile Respondent", "14(a)(3)",
+     None, Severity.CORRECTION,
+     "Juvenile respondents must be referred to by initials."),
+
+    # Rule 14(a)(4): TPR proceedings identity protection
+    ("PRV-005", "Identity Protection: TPR Proceedings", "14(a)(4)",
+     None, Severity.CORRECTION,
+     "Child and family members in TPR proceedings must use initials."),
+
+    # Rule 14(a)(6): sexual offense victim identity protection
+    ("PRV-006", "Identity Protection: Sexual Offense Victim", "14(a)(6)",
+     None, Severity.CORRECTION,
+     "Sexual offense victims must be referred to by initials."),
+
+    # Rule 21(a)(2): writ petition required content
+    ("WRT-001", "Writ Petition: Required Content", "21(a)(2)",
+     None, Severity.CORRECTION,
+     "Writ petition must state relief sought, issues, facts, and reasons."),
+
+    # Rule 21(a)(3): writ petition supporting documents
+    ("WRT-002", "Writ Petition: Supporting Documents", "21(a)(3)",
+     None, Severity.CORRECTION,
+     "Writ petition must include supporting documents (orders, record)."),
+
+    # Rule 21(a)(3)(B): exhibit citation format
+    ("WRT-003", "Writ Petition: Exhibit Citation Format", "21(a)(3)(B)",
+     None, Severity.NOTE,
+     "Supporting documents should use (E{page}:{line/para}) format."),
+
+    # N.D.R.Ct. 11.6: medium-neutral citation compliance (semantic)
+    ("CIT-002", "ND Case Citations: Pre/Post-1997 Compliance", "N.D.R.Ct. 11.6",
+     None, Severity.NOTE,
+     "Claude evaluates whether pre-1997 vs post-1997 citation distinction is correctly applied."),
 ]
 
 
@@ -274,6 +322,44 @@ Evaluation guidance:
   enough context to identify what is being cited, either in the text surrounding the citation
   or in the citation itself. Bare citations like (R12:5) with no surrounding context about
   what the item is should be flagged.
+- PRV-002: Rule 14(a)(1) requires that the respondent in a mental health proceeding be
+  referred to by initials only. First determine if this is a mental health case (look for
+  indicators like "mental health commitment", "treatment order", N.D.C.C. ch. 25-03.1, etc.).
+  If not a mental health case, pass automatically. If it is, check whether the respondent's
+  full name appears anywhere (it should be initials only). Note: PRV-001 covers minor names
+  under N.D.R.Ct. 3.4; this check specifically addresses Rule 14(a)(1) mental health cases.
+- PRV-003: Rule 14(a)(2) requires initials for the respondent and family members in
+  guardianship/conservatorship proceedings. Determine if this is such a case (look for
+  "guardianship", "conservatorship", N.D.C.C. ch. 30.1). If not, pass automatically.
+  If it is, check that the respondent and family members use initials only.
+- PRV-004: Rule 14(a)(3) requires initials for the respondent in a juvenile proceeding.
+  Determine if this is a juvenile case (look for "juvenile", "delinquent", N.D.C.C. ch. 27-20).
+  If not, pass automatically. If it is, check that the juvenile respondent uses initials.
+- PRV-005: Rule 14(a)(4) requires initials for the child and family members in termination
+  of parental rights proceedings. Look for "termination of parental rights", "TPR",
+  N.D.C.C. ch. 27-20. If not a TPR case, pass automatically. If it is, check that the
+  child and family members use initials only.
+- PRV-006: Rule 14(a)(6) requires initials for victims or alleged victims of sexual offenses.
+  Determine if the case involves a sexual offense (look for sexual assault, rape, gross sexual
+  imposition, N.D.C.C. ch. 12.1-20, etc.). If not, pass automatically. If it is, check that
+  the victim is referred to by initials only.
+- WRT-001: Rule 21(a)(2) requires a writ petition to state: (A) relief sought, (B) issues
+  presented, (C) facts necessary to understand the issues, and (D) reasons why a writ should
+  issue. First determine if this is a writ petition (look for "supervisory writ", "writ of
+  mandamus", "writ of prohibition", "extraordinary writ", "petition for writ"). If not a
+  writ petition, pass automatically. If it is, check that all four elements are present.
+- WRT-002: Rule 21(a)(3) requires a writ petition to include supporting documents (orders,
+  parts of the record, or other documents necessary to understand the petition). If not a
+  writ petition, pass automatically. If it is, check whether supporting documents are
+  referenced or attached as exhibits.
+- WRT-003: Rule 21(a)(3)(B) specifies that supporting documents should be cited using the
+  format (E{{page}}:{{line/para}}), e.g. (E6:12:¶3). If not a writ petition, pass
+  automatically. If it is, check whether exhibit citations use this format.
+- CIT-002: N.D.R.Ct. 11.6 distinguishes pre-1997 and post-1997 ND Supreme Court opinions.
+  Post-1997 opinions must include the medium-neutral citation (YYYY ND ##). Pre-1997
+  opinions need only the N.W.2d citation. Check whether the brief correctly applies this
+  distinction — e.g., a case from 2005 should have "2005 ND 123" format, while a case from
+  1990 needs only the N.W.2d cite. Be lenient; this is an advisory check.
 
 Return ONLY valid JSON, no markdown formatting."""
 

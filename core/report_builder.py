@@ -8,6 +8,7 @@ from datetime import datetime
 from core.models import CheckResult, ComplianceReport, Recommendation, Severity
 
 RULES_BASE_URL = "https://www.ndcourts.gov/legal-resources/rules/ndrappp"
+NDRCT_RULES_BASE_URL = "https://www.ndcourts.gov/legal-resources/rules/ndrct"
 
 
 def build_html_report(report: ComplianceReport, version_stamp: str = "") -> str:
@@ -176,18 +177,34 @@ def _esc(text: str) -> str:
 def _rule_link(rule_str: str) -> str:
     """Convert a rule citation like '32(a)(1)' into an HTML hyperlink.
 
-    Maps to https://www.ndcourts.gov/legal-resources/rules/ndrappp/{rule_number}.
+    Maps to the appropriate ndcourts.gov URL:
+    - N.D.R.Ct. rules → /legal-resources/rules/ndrct/{rule_number with hyphens}
+    - N.D.R.App.P. rules → /legal-resources/rules/ndrappp/{rule_number}
     Handles compound citations like '28(h)/34'.
     """
     parts = rule_str.split("/")
     links = []
     for part in parts:
         part = part.strip()
-        # Extract the base rule number (digits before any parenthetical)
-        match = re.match(r"(\d+)", part)
+        # Check for N.D.R.Ct. prefix (e.g., "N.D.R.Ct. 11.6(b)")
+        ndrct_match = re.match(r"N\.D\.R\.Ct\.\s*([\d.]+)", part)
+        if ndrct_match:
+            rule_num = ndrct_match.group(1)
+            # ndcourts.gov uses hyphens for dots in N.D.R.Ct. URLs (e.g., 3-4, 11-6)
+            url_num = rule_num.replace(".", "-")
+            url = f"{NDRCT_RULES_BASE_URL}/{url_num}"
+            links.append(f'<a href="{url}" target="_blank" class="rule-link">N.D.R.Ct. {part[ndrct_match.start(1):]}</a>')
+            continue
+        # Extract the base rule number (digits/dots before any parenthetical)
+        match = re.match(r"([\d.]+)", part)
         if match:
             rule_num = match.group(1)
-            url = f"{RULES_BASE_URL}/{rule_num}"
+            # Determine base URL: rule numbers with dots (like 3.4, 11.6) are N.D.R.Ct.
+            if "." in rule_num:
+                url_num = rule_num.replace(".", "-")
+                url = f"{NDRCT_RULES_BASE_URL}/{url_num}"
+            else:
+                url = f"{RULES_BASE_URL}/{rule_num}"
             links.append(f'<a href="{url}" target="_blank" class="rule-link">Rule {part}</a>')
         else:
             links.append(f"Rule {_esc(part)}")

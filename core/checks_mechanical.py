@@ -49,6 +49,7 @@ def run_mechanical_checks(metadata: BriefMetadata) -> list[CheckResult]:
     results.append(_check_paragraph_numbering(metadata))
     results.append(_check_certificate_of_compliance(metadata))
     results.append(_check_record_citations(metadata))
+    results.append(_check_medium_neutral_citations(metadata))
 
     return results
 
@@ -729,6 +730,77 @@ def _check_record_citations(metadata: BriefMetadata) -> CheckResult:
         message="No record citations in (R#:#) format detected.",
         details="Rule 30(a) requires references to the record with register of actions "
                 "index numbers. Rule 30(b)(1) specifies the (R{index}:{page}) format.",
+    )
+
+
+def _check_medium_neutral_citations(metadata: BriefMetadata) -> CheckResult:
+    """CIT-001: ND case citations use medium-neutral format per N.D.R.Ct. 11.6(b).
+
+    For post-1997 ND Supreme Court opinions, citations must include the
+    medium-neutral format "YYYY ND ##" (e.g., "2005 ND 123").  This check
+    finds N.W.2d citations that appear to reference ND cases but lack an
+    accompanying medium-neutral cite.
+    """
+    text = metadata.full_text
+
+    # Find N.W.2d citations: e.g., "123 N.W.2d 456" or "123 N.W. 2d 456"
+    nw2d_pattern = re.compile(r"\d+\s+N\.W\.(?:\s*)2d\s+\d+")
+    nw2d_cites = nw2d_pattern.findall(text)
+
+    if not nw2d_cites:
+        return CheckResult(
+            check_id="CIT-001",
+            name="ND Case Citations: Medium-Neutral Format",
+            rule="N.D.R.Ct. 11.6(b)",
+            passed=True, severity=Severity.CORRECTION,
+            message="No N.W.2d citations found to check.",
+        )
+
+    # Medium-neutral format: "YYYY ND ##" or "YYYY ND App ##"
+    mn_pattern = re.compile(r"\b(19|20)\d{2}\s+ND(?:\s+App)?\s+\d+")
+    mn_cites = mn_pattern.findall(text)
+    has_mn = bool(mn_pattern.search(text))
+
+    # Check each N.W.2d cite for a nearby medium-neutral cite.
+    # A simple heuristic: count how many N.W.2d cites appear WITHOUT
+    # any medium-neutral cite within ~200 chars before or after.
+    missing = []
+    for match in nw2d_pattern.finditer(text):
+        start = max(0, match.start() - 200)
+        end = min(len(text), match.end() + 200)
+        window = text[start:end]
+        if not mn_pattern.search(window):
+            missing.append(match.group().strip())
+
+    total = len(nw2d_cites)
+    missing_count = len(missing)
+
+    if missing_count == 0:
+        return CheckResult(
+            check_id="CIT-001",
+            name="ND Case Citations: Medium-Neutral Format",
+            rule="N.D.R.Ct. 11.6(b)",
+            passed=True, severity=Severity.CORRECTION,
+            message=f"All {total} N.W.2d citation(s) have accompanying medium-neutral cites.",
+        )
+
+    # Some N.W.2d cites lack medium-neutral — but pre-1997 cases legitimately
+    # won't have them, so flag as advisory rather than definitive failure
+    examples = missing[:5]
+    example_str = "; ".join(examples)
+    if len(missing) > 5:
+        example_str += f" (and {len(missing) - 5} more)"
+
+    return CheckResult(
+        check_id="CIT-001",
+        name="ND Case Citations: Medium-Neutral Format",
+        rule="N.D.R.Ct. 11.6(b)",
+        passed=False, severity=Severity.CORRECTION,
+        message=f"{missing_count} of {total} N.W.2d citation(s) lack a nearby medium-neutral cite.",
+        details=f"N.D.R.Ct. 11.6(b) requires post-1997 ND opinions to include the "
+                f"medium-neutral citation (YYYY ND ##). Citations without nearby "
+                f"medium-neutral format: {example_str}. Note: pre-1997 cases "
+                f"legitimately lack medium-neutral cites — verify manually.",
     )
 
 
