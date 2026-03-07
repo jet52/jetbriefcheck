@@ -4,20 +4,53 @@ Provides:
 - Local version info reading
 - Remote version check (lightweight, fail-open)
 - Rule content hash verification
-- Rule staleness warning based on age since last verification
+- Rule staleness check against ndcourts.gov (cached, 90-day refresh)
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
+from urllib.request import Request, urlopen
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 VERSION_FILE = PROJECT_DIR / "version.json"
 RULES_DIR = PROJECT_DIR / "references" / "rules"
+STALENESS_CACHE = Path.home() / ".cache" / "jetbriefcheck" / "rule_staleness.json"
+STALENESS_MAX_AGE_DAYS = 90
+
+# Map rule file stems to ndcourts.gov URLs
+RULE_URLS = {
+    "rule-14": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/14",
+    "rule-21": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/21",
+    "rule-28": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/28",
+    "rule-29": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/29",
+    "rule-30": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/30",
+    "rule-32": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/32",
+    "rule-34": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/34",
+    "rule-3.4": "https://www.ndcourts.gov/legal-resources/rules/ndrct/3-4",
+    "rule-11.6": "https://www.ndcourts.gov/legal-resources/rules/ndrct/11-6",
+}
+
+# Effective dates at the time rules were last bundled (update when rules are refreshed)
+BUNDLED_EFFECTIVE_DATES = {
+    "rule-14": "2020-03-01",
+    "rule-21": "2022-03-01",
+    "rule-28": "2025-06-01",
+    "rule-29": "2022-03-01",
+    "rule-30": "2023-01-25",
+    "rule-32": "2024-04-01",
+    "rule-34": "2025-09-01",
+    "rule-3.4": "2025-03-01",
+    "rule-11.6": "2025-03-01",
+}
+
+EFFECTIVE_DATE_RE = re.compile(r"Effective\s+Date[:\s]+(\d{1,2}/\d{1,2}/\d{4})")
 
 
 def load_local_version() -> dict:
@@ -68,30 +101,98 @@ def check_rule_hashes(local_version: dict) -> list[str]:
     return warnings
 
 
-def check_rule_staleness(local_version: dict) -> Optional[str]:
-    """Check if rules are older than the configured freshness threshold.
+def _load_staleness_cache() -> dict:
+    """Load the cached staleness result. Returns empty dict if missing/corrupt."""
+    try:
+        return json.loads(STALENESS_CACHE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
 
-    Returns a warning string if stale, None otherwise.
-    """
-    verified_str = local_version.get("rules_verified")
-    if not verified_str:
+
+def _save_staleness_cache(data: dict) -> None:
+    """Write staleness cache, creating parent dirs as needed."""
+    try:
+        STALENESS_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        STALENESS_CACHE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except OSError:
+        pass  # fail silently — cache is advisory
+
+
+def _fetch_effective_date(url: str, timeout: float = 10.0) -> Optional[str]:
+    """Fetch a rule page on ndcourts.gov and extract the effective date as YYYY-MM-DD."""
+    try:
+        req = Request(url, headers={"User-Agent": "jetbriefcheck-freshness-check"})
+        with urlopen(req, timeout=timeout) as resp:
+            html = resp.read().decode("utf-8", errors="replace")
+    except Exception:
+        return None
+
+    match = EFFECTIVE_DATE_RE.search(html)
+    if not match:
         return None
 
     try:
-        verified_date = datetime.strptime(verified_str, "%Y-%m-%d").date()
+        dt = datetime.strptime(match.group(1), "%m/%d/%Y")
+        return dt.strftime("%Y-%m-%d")
     except ValueError:
         return None
 
-    max_days = local_version.get("rules_freshness_days", 90)
-    age_days = (date.today() - verified_date).days
 
-    if age_days > max_days:
-        return (
-            f"Bundled rules were last verified {age_days} days ago "
-            f"({verified_str}). Consider checking ndcourts.gov for amendments "
-            f"to Rules 28, 29, 30, 32, 34, and 3.4."
-        )
-    return None
+def _check_rules_live() -> list[str]:
+    """Fetch effective dates from ndcourts.gov and compare against bundled dates.
+
+    Returns a list of warning strings for any stale rules. Saves results to cache.
+    """
+    stale = []
+    live_dates = {}
+
+    for rule, url in RULE_URLS.items():
+        bundled = BUNDLED_EFFECTIVE_DATES.get(rule)
+        if not bundled:
+            continue
+        live = _fetch_effective_date(url)
+        if live:
+            live_dates[rule] = live
+            if live != bundled:
+                stale.append(
+                    f"Rule {rule} may be outdated: bundled effective date "
+                    f"{bundled}, ndcourts.gov shows {live}. "
+                    f"Check {url}"
+                )
+
+    _save_staleness_cache({
+        "last_checked": date.today().isoformat(),
+        "live_dates": live_dates,
+        "stale_rules": [s.split(":")[0].replace("Rule ", "") for s in stale],
+        "warnings": stale,
+    })
+
+    return stale
+
+
+def check_rule_staleness(local_version: dict) -> list[str]:
+    """Check bundled rules against ndcourts.gov effective dates (cached).
+
+    Uses a local cache at ~/.cache/jetbriefcheck/rule_staleness.json.
+    Re-checks live every 90 days. Returns a list of warning strings.
+    """
+    cache = _load_staleness_cache()
+    last_checked_str = cache.get("last_checked")
+
+    if last_checked_str:
+        try:
+            last_checked = datetime.strptime(last_checked_str, "%Y-%m-%d").date()
+            age = (date.today() - last_checked).days
+            if age < STALENESS_MAX_AGE_DAYS:
+                return cache.get("warnings", [])
+        except ValueError:
+            pass
+
+    # Cache is missing, expired, or corrupt — check live (fail-open)
+    try:
+        return _check_rules_live()
+    except Exception:
+        return []
 
 
 def fetch_remote_version(timeout: float = 2.0) -> Optional[dict]:
@@ -162,10 +263,8 @@ def get_version_warnings(check_remote: bool = True, timeout: float = 2.0) -> lis
     # Rule hash integrity check
     warnings.extend(check_rule_hashes(local))
 
-    # Rule staleness check
-    staleness = check_rule_staleness(local)
-    if staleness:
-        warnings.append(staleness)
+    # Rule staleness check (cached, checks ndcourts.gov every 90 days)
+    warnings.extend(check_rule_staleness(local))
 
     # Remote version check (fail-open)
     if check_remote:

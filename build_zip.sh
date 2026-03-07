@@ -16,6 +16,7 @@ cp -r "$REPO_ROOT/scripts"    "$DEST/scripts"
 cp    "$REPO_ROOT/SKILL.md"          "$DEST/SKILL.md"
 cp    "$REPO_ROOT/requirements.txt"  "$DEST/requirements.txt"
 cp    "$REPO_ROOT/version.json"      "$DEST/version.json"
+cp    "$REPO_ROOT/check_update.py"    "$DEST/check_update.py"
 
 # Clean build artifacts
 find "$DEST" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

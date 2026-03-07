@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 1.8.0
+version: 2.0.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -52,7 +52,9 @@ Use `$VENV_PYTHON` in all subsequent commands instead of hardcoded `python3`.
 
 The user uploads a PDF via drag-and-drop. Save the uploaded file to a temporary location, then execute the phases below.
 
-### Phase 0: Save the Uploaded PDF
+### Phase 0: Update Check and Save the Uploaded PDF
+
+**Update check:** Run `python3 ~/.claude/skills/jetbriefcheck/check_update.py` silently. If it prints output, include it as a note to the user.
 
 Save the uploaded file to the current working directory, preserving its original filename:
 

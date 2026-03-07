@@ -28,6 +28,7 @@ from core.checks_mechanical import run_mechanical_checks
 from core.models import BriefType
 from core.pdf_extract import extract_brief
 from core.version_check import get_version_warnings
+from check_update import check_for_update
 
 
 def main():
@@ -48,7 +49,12 @@ def main():
                         help="Skip remote version check")
     args = parser.parse_args()
 
-    # Version and rule freshness warnings
+    # Update check (cached, weekly)
+    update_msg = check_for_update()
+    if update_msg:
+        print(f"Note: {update_msg}", file=sys.stderr)
+
+    # Rule freshness warnings
     warnings = get_version_warnings(check_remote=not args.skip_version_check)
     for w in warnings:
         print(f"Warning: {w}", file=sys.stderr)

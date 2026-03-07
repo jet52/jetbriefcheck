@@ -188,7 +188,7 @@ python app.py
 ## Architecture
 
 - **`core/`** — Shared analysis engine (PDF extraction, mechanical checks, semantic checks, report builder)
-- **`scripts/`** — CLI scripts for the Claude Code skill workflow (`check_brief.py`, `build_report.py`)
+- **`scripts/`** — CLI scripts for the Claude Code skill workflow (`check_brief.py`, `build_report.py`, `check_rule_freshness.py`)
 - **`references/`** — Check definitions, rules summary, and bundled rule text
 - **`web/`** — Flask web interface (upload form, report viewer, JSON API)
 - **`SKILL.md`** — Self-contained Claude Code skill definition (bundles all rules and check definitions inline; works with or without PyMuPDF)
@@ -220,13 +220,20 @@ The full text of the following rules is bundled in `references/rules/`:
 | `rule-3.4.md` | N.D.R.Ct. 3.4 | Privacy Protection for Filings |
 | `rule-11.6.md` | N.D.R.Ct. 11.6 | Medium-Neutral Case Citations |
 
-Rules were last copied from the authoritative source on **2026-02-17**.
+Rules were last verified current against ndcourts.gov on **2026-03-07**.
 
-## TODO
+## Rule Freshness Checking
 
-- [ ] **Rule freshness check**: Add a feature (script or startup check) that compares the bundled rule files against the current versions at ndcourts.gov to detect whether any rules have been amended since the bundled copies were last updated. Candidate URLs:
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/28
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/29
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/32
-  - https://www.ndcourts.gov/legal-resources/rules/ndrappp/34
-  - https://www.ndcourts.gov/legal-resources/rules/ndrct/3-4
+The skill automatically checks whether bundled rules are still current by comparing their effective dates against the live versions on ndcourts.gov. This check runs as part of the normal compliance workflow via `get_version_warnings()` in `core/version_check.py`.
+
+- **Cached**: Results are stored in `~/.cache/jetbriefcheck/rule_staleness.json` and reused for 90 days. No network calls on most runs.
+- **Fail-open**: If ndcourts.gov is unreachable, the check silently succeeds.
+- **Per-rule tracking**: Each rule's effective date is tracked independently. If any rule is amended, a warning is emitted identifying which rule changed and linking to the ndcourts.gov page.
+
+To force a live check (bypassing the cache):
+
+```bash
+python3 scripts/check_rule_freshness.py
+```
+
+When a rule is flagged as stale, update the bundled `.md` file, update `BUNDLED_EFFECTIVE_DATES` in `core/version_check.py`, recompute hashes in `version.json`, and bump `rules_verified`.

@@ -1,7 +1,7 @@
 {
-  "version": "1.8.0",
-  "build_date": "2026-03-03",
-  "rules_verified": "2026-03-03",
+  "version": "2.0.0",
+  "build_date": "2026-03-07",
+  "rules_verified": "2026-03-07",
   "rules_freshness_days": 90,
   "check_url": "https://raw.githubusercontent.com/jet52/jetbriefcheck/main/version.json",
   "rule_hashes": {

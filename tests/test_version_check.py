@@ -27,8 +27,14 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from core.version_check import (
+    BUNDLED_EFFECTIVE_DATES,
+    STALENESS_CACHE,
+    STALENESS_MAX_AGE_DAYS,
     VERSION_FILE,
     RULES_DIR,
+    _check_rules_live,
+    _load_staleness_cache,
+    _save_staleness_cache,
     check_remote_version,
     check_rule_hashes,
     check_rule_staleness,
@@ -71,7 +77,7 @@ class TestLoadLocalVersion:
         assert "rule_hashes" in local_version
 
     def test_returns_expected_version(self, local_version):
-        assert local_version["version"] == "1.6.0"
+        assert local_version["version"] == "2.0.0"
 
     def test_returns_empty_dict_for_missing_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr("core.version_check.VERSION_FILE", tmp_path / "nope.json")
@@ -168,61 +174,87 @@ class TestCheckRuleHashes:
 # ---------------------------------------------------------------------------
 
 class TestCheckRuleStaleness:
-    def test_no_warning_when_fresh(self):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
-        result = check_rule_staleness({
-            "rules_verified": yesterday,
-            "rules_freshness_days": 90,
-        })
-        assert result is None
+    """Tests for the cached ndcourts.gov staleness check."""
 
-    def test_no_warning_at_boundary(self):
-        boundary = (date.today() - timedelta(days=90)).isoformat()
-        result = check_rule_staleness({
-            "rules_verified": boundary,
-            "rules_freshness_days": 90,
-        })
-        assert result is None
+    def test_returns_cached_result_when_fresh(self, tmp_path, monkeypatch):
+        """If the cache was checked recently, return cached warnings without fetching."""
+        cache_file = tmp_path / "staleness.json"
+        cache_data = {
+            "last_checked": date.today().isoformat(),
+            "warnings": [],
+        }
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
 
-    def test_warns_when_stale(self):
-        old_date = (date.today() - timedelta(days=91)).isoformat()
-        result = check_rule_staleness({
-            "rules_verified": old_date,
-            "rules_freshness_days": 90,
-        })
-        assert result is not None
-        assert "91 days ago" in result
-        assert "ndcourts.gov" in result
+        result = check_rule_staleness({})
+        assert result == []
 
-    def test_warns_when_very_stale(self):
-        old_date = (date.today() - timedelta(days=365)).isoformat()
-        result = check_rule_staleness({
-            "rules_verified": old_date,
-            "rules_freshness_days": 90,
-        })
-        assert result is not None
-        assert "365 days ago" in result
+    def test_returns_cached_warnings_when_stale_rules_found(self, tmp_path, monkeypatch):
+        """Cached warnings are returned verbatim when cache is fresh."""
+        cache_file = tmp_path / "staleness.json"
+        cached_warning = "Rule rule-28 may be outdated: bundled effective date 2025-06-01, ndcourts.gov shows 2025-09-01."
+        cache_data = {
+            "last_checked": date.today().isoformat(),
+            "warnings": [cached_warning],
+        }
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
 
-    def test_custom_freshness_threshold(self):
-        old_date = (date.today() - timedelta(days=31)).isoformat()
-        result = check_rule_staleness({
-            "rules_verified": old_date,
-            "rules_freshness_days": 30,
-        })
-        assert result is not None
+        result = check_rule_staleness({})
+        assert result == [cached_warning]
 
-    def test_no_warning_when_missing_date(self):
-        assert check_rule_staleness({}) is None
-        assert check_rule_staleness({"rules_verified": ""}) is None
+    def test_checks_live_when_cache_expired(self, tmp_path, monkeypatch):
+        """When the cache is older than STALENESS_MAX_AGE_DAYS, fetch live."""
+        cache_file = tmp_path / "staleness.json"
+        old_date = (date.today() - timedelta(days=STALENESS_MAX_AGE_DAYS + 1)).isoformat()
+        cache_data = {"last_checked": old_date, "warnings": []}
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
 
-    def test_no_warning_for_invalid_date(self):
-        assert check_rule_staleness({"rules_verified": "not-a-date"}) is None
+        with patch("core.version_check._check_rules_live", return_value=[]) as mock_live:
+            result = check_rule_staleness({})
+            mock_live.assert_called_once()
+        assert result == []
 
-    def test_defaults_to_90_days_if_threshold_missing(self):
-        fresh = (date.today() - timedelta(days=89)).isoformat()
-        assert check_rule_staleness({"rules_verified": fresh}) is None
-        stale = (date.today() - timedelta(days=91)).isoformat()
-        assert check_rule_staleness({"rules_verified": stale}) is not None
+    def test_checks_live_when_cache_missing(self, tmp_path, monkeypatch):
+        """When there is no cache file, fetch live."""
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", tmp_path / "nope.json")
+
+        with patch("core.version_check._check_rules_live", return_value=[]) as mock_live:
+            result = check_rule_staleness({})
+            mock_live.assert_called_once()
+        assert result == []
+
+    def test_checks_live_when_cache_corrupt(self, tmp_path, monkeypatch):
+        """Corrupt cache triggers a live check."""
+        cache_file = tmp_path / "staleness.json"
+        cache_file.write_text("not json {{{", encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
+
+        with patch("core.version_check._check_rules_live", return_value=[]) as mock_live:
+            result = check_rule_staleness({})
+            mock_live.assert_called_once()
+
+    def test_fails_open_on_live_check_error(self, tmp_path, monkeypatch):
+        """If the live check raises, return empty list (fail-open)."""
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", tmp_path / "nope.json")
+
+        with patch("core.version_check._check_rules_live", side_effect=Exception("network error")):
+            result = check_rule_staleness({})
+        assert result == []
+
+    def test_cache_at_boundary_is_still_fresh(self, tmp_path, monkeypatch):
+        """Cache exactly STALENESS_MAX_AGE_DAYS - 1 old should still be fresh."""
+        cache_file = tmp_path / "staleness.json"
+        boundary = (date.today() - timedelta(days=STALENESS_MAX_AGE_DAYS - 1)).isoformat()
+        cache_data = {"last_checked": boundary, "warnings": []}
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
+
+        with patch("core.version_check._check_rules_live") as mock_live:
+            result = check_rule_staleness({})
+            mock_live.assert_not_called()
+        assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -255,12 +287,12 @@ class TestRemoteVersionCheck:
 
     def test_check_remote_warns_on_newer_version(self, local_version):
         remote = dict(local_version)
-        remote["version"] = "2.0.0"
+        remote["version"] = "3.0.0"
         with patch("core.version_check.fetch_remote_version", return_value=remote):
             messages = check_remote_version(local_version)
             assert len(messages) >= 1
-            assert "2.0.0" in messages[0]
-            assert "v1.6.0" in messages[0]
+            assert "3.0.0" in messages[0]
+            assert "v2.0.0" in messages[0]
 
     def test_check_remote_warns_on_newer_rules(self, local_version):
         remote = dict(local_version)
@@ -275,36 +307,62 @@ class TestRemoteVersionCheck:
 # ---------------------------------------------------------------------------
 
 class TestGetVersionWarnings:
-    def test_clean_run_no_warnings(self):
+    def test_clean_run_no_warnings(self, tmp_path, monkeypatch):
         """With current files in good shape, no warnings expected (skip remote)."""
+        # Provide a fresh cache so no live check is attempted
+        cache_file = tmp_path / "staleness.json"
+        cache_file.write_text(json.dumps({
+            "last_checked": date.today().isoformat(), "warnings": [],
+        }), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
+
         warnings = get_version_warnings(check_remote=False)
         assert warnings == []
 
-    def test_remote_disabled_skips_fetch(self):
+    def test_remote_disabled_skips_fetch(self, tmp_path, monkeypatch):
+        cache_file = tmp_path / "staleness.json"
+        cache_file.write_text(json.dumps({
+            "last_checked": date.today().isoformat(), "warnings": [],
+        }), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
+
         with patch("core.version_check.check_remote_version") as mock_remote:
             get_version_warnings(check_remote=False)
             mock_remote.assert_not_called()
 
-    def test_remote_enabled_calls_fetch(self):
+    def test_remote_enabled_calls_fetch(self, tmp_path, monkeypatch):
+        cache_file = tmp_path / "staleness.json"
+        cache_file.write_text(json.dumps({
+            "last_checked": date.today().isoformat(), "warnings": [],
+        }), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
+
         with patch("core.version_check.check_remote_version", return_value=[]) as mock_remote:
             get_version_warnings(check_remote=True, timeout=0.1)
             mock_remote.assert_called_once()
 
-    def test_aggregates_all_warning_types(self):
-        """Simulate hash mismatch + staleness simultaneously."""
+    def test_aggregates_hash_and_staleness_warnings(self, tmp_path, monkeypatch):
+        """Simulate hash mismatch + stale rule simultaneously."""
         fake_version = {
             "version": "1.1.0",
             "rules_verified": "2020-01-01",
-            "rules_freshness_days": 90,
             "rule_hashes": {
                 "rule-28.md": "sha256:0000",
             },
         }
+        # Provide a cache with a staleness warning
+        cache_file = tmp_path / "staleness.json"
+        cache_file.write_text(json.dumps({
+            "last_checked": date.today().isoformat(),
+            "warnings": ["Rule rule-28 may be outdated"],
+        }), encoding="utf-8")
+        monkeypatch.setattr("core.version_check.STALENESS_CACHE", cache_file)
+
         with patch("core.version_check.load_local_version", return_value=fake_version):
             warnings = get_version_warnings(check_remote=False)
             assert len(warnings) >= 2
             has_hash_warning = any("modified" in w or "mismatch" in w for w in warnings)
-            has_stale_warning = any("ndcourts.gov" in w for w in warnings)
+            has_stale_warning = any("outdated" in w for w in warnings)
             assert has_hash_warning
             assert has_stale_warning
 
