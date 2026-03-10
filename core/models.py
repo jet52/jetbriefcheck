@@ -13,6 +13,7 @@ class BriefType(Enum):
     REPLY = "reply"
     CROSS_APPEAL = "cross_appeal"
     AMICUS = "amicus"
+    PETITION_REHEARING = "petition_rehearing"
     UNKNOWN = "unknown"
 
 

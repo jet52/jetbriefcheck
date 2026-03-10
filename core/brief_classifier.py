@@ -20,7 +20,9 @@ from core.models import BriefMetadata, BriefType
 def classify_brief(metadata: BriefMetadata) -> BriefType:
     """Determine brief type from cover page text.
 
-    Two-pass approach:
+    Three-pass approach:
+      Pass 0: Check for "petition for rehearing" — this is distinctive
+              and should be detected before any brief-type logic.
       Pass 1: Look for "X brief" or "brief of X" phrases — this is the
               primary signal and avoids false matches on party labels.
       Pass 2: Fall back to standalone party labels only if pass 1 finds nothing.
@@ -28,6 +30,10 @@ def classify_brief(metadata: BriefMetadata) -> BriefType:
     Priority within each pass: amicus > reply > cross-appeal > appellee > appellant.
     """
     text = _normalize(metadata.cover_text)
+
+    # ---- Pass 0: petition for rehearing ----
+    if _match_petition_rehearing(text):
+        return BriefType.PETITION_REHEARING
 
     # ---- Pass 1: phrases tied to "brief" ----
     result = _match_brief_phrase(text)
@@ -132,6 +138,24 @@ def _p_respondent() -> str:
 def _p_reply() -> str:
     """Regex fragment matching 'reply' loosely."""
     return rf"rep{_IL}[yi1!|]"
+
+
+# ---------------------------------------------------------------------------
+# Pass 0: Match "petition for rehearing"
+# ---------------------------------------------------------------------------
+
+def _match_petition_rehearing(text: str) -> bool:
+    """Detect 'petition for rehearing' on the cover page.
+
+    Handles OCR artifacts, letter-spacing, and common misspellings.
+    """
+    # "petition for rehearing" — the canonical phrase
+    if re.search(r"pet[il1!|]t[il1!|]on\s+for\s+rehear[il1!|]ng", text):
+        return True
+    # "rehearing petition" (reversed order)
+    if re.search(r"rehear[il1!|]ng\s+pet[il1!|]t[il1!|]on", text):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------

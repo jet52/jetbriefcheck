@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0",
-  "build_date": "2026-03-07",
-  "rules_verified": "2026-03-07",
+  "version": "2.1.0",
+  "build_date": "2026-03-10",
+  "rules_verified": "2026-03-10",
   "rules_freshness_days": 90,
   "check_url": "https://raw.githubusercontent.com/jet52/jetbriefcheck/main/version.json",
   "rule_hashes": {
@@ -13,6 +13,7 @@
     "rule-32.md": "sha256:79035958c99d48458c5917de3c2b54d09fac72513c81c372057bd6fccef2b13c",
     "rule-34.md": "sha256:a4bec71b9442c2348c0af552f90fa4dc8f69e45a8492db27173b715808b7e852",
     "rule-3.4.md": "sha256:2633bd888a193d8589b2df9884ded2276ebcef5bad7e6080a0b7aae4001b698c",
+    "rule-40.md": "sha256:8762510e4d5cef56dcf69daa36d50a43fccee81490b48f797fef07c357ecd808",
     "rule-11.6.md": "sha256:94b4ef4501b4dd15d1df0c0c05df2d40abf185d32f87baac6f6a806ad80aaa59"
   }
 }

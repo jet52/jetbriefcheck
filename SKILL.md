@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 2.0.0
+version: 2.1.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -70,7 +70,7 @@ All intermediate and output files use the PDF stem in their names to avoid colli
 Run the check script in mechanical-only mode. This makes **no API calls**:
 
 ```bash
-$VENV_PYTHON scripts/check_brief.py "<filename>.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus]
+$VENV_PYTHON scripts/check_brief.py "<filename>.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus|petition_rehearing]
 ```
 
 - **If the script succeeds**: Capture the intermediate JSON file path from stdout. Continue to **Phase 2 (Full Mode)**.
@@ -149,6 +149,7 @@ When PyMuPDF is not available, Claude performs semantic-only analysis by reading
 #### Phase 2F: Classify Brief Type
 
 Read the uploaded PDF directly. Examine the cover page to determine the brief type:
+- **Petition for Rehearing**: Cover says "Petition for Rehearing" or similar
 - **Appellant**: Cover says "Brief of Appellant" or similar
 - **Appellee**: Cover says "Brief of Appellee" or similar
 - **Reply**: Cover says "Reply Brief" or similar
@@ -253,6 +254,7 @@ These are run by `check_brief.py` — no changes needed here.
 | PG-002 | Reply brief <= 12 pages | 32(a)(8) | REJECT |
 | PG-003 | Amicus brief <= 19 pages | 29(a)(5) | REJECT |
 | PG-004 | Amicus rehearing <= 2,600 words | 29(b)(4) | REJECT |
+| PG-005 | Petition for rehearing <= 10 pages (excl. addendum) | 40(b) | REJECT |
 | COV-001 | Cover color matches brief type | 32(a)(2) | CORRECTION |
 | COV-002 | "ORAL ARGUMENT REQUESTED" on cover | 28(h)/34(a)(1)(C) | NOTE |
 | CNT-004 | Paragraphs numbered (arabic numerals) | 32(a)(7) | CORRECTION |
@@ -273,6 +275,7 @@ Before evaluating, filter checks by brief type:
 - **Appellant + Appellee**: SEC-012
 - **Appellant + Appellee + Cross-appeal**: REC-002, REC-003
 - **Amicus only**: SEC-014, SEC-015
+- **Petition for Rehearing only**: RHR-001, RHR-002, RHR-003
 
 Note: PRV-002–006, WRT-001–003, and CIT-002 are applicable to all brief types but auto-pass when the case type or document type doesn't trigger them (e.g., WRT checks auto-pass if the document is not a writ petition).
 
@@ -487,6 +490,27 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Note**: This is advisory — the format is recommended, not strictly required.
 **Severity**: NOTE
 
+##### RHR-001 — Rehearing: Points Overlooked or Misapprehended
+**Rule**: 40(a)(2) — "state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended"
+**Look for**: Specific identification of points of law or fact the petitioner claims the court overlooked or misunderstood. The petition should not merely reargue the case.
+**Pass if**: Not a petition for rehearing, OR the petition identifies specific points with particularity.
+**Fail if**: Petition for rehearing that fails to identify specific points the court allegedly overlooked or misapprehended, or merely reargues the merits without identifying particular errors.
+**Severity**: REJECT
+
+##### RHR-002 — Rehearing: Applicable Rule 28(b) Items
+**Rule**: 40(b) — "must include items required under Rule 28(b) that are applicable"
+**Look for**: Whether the petition includes applicable Rule 28(b) items, particularly a table of contents (28(b)(1)) and table of authorities (28(b)(2)). For short petitions (under ~5 pages), the absence of a TOC/TOA may be reasonable.
+**Pass if**: Not a petition for rehearing, OR the petition includes applicable Rule 28(b) items (or is short enough that their absence is reasonable).
+**Fail if**: Petition for rehearing of substantial length that omits a TOC or TOA.
+**Severity**: CORRECTION
+
+##### RHR-003 — Rehearing: Supporting Argument
+**Rule**: 40(a)(2) — "must contain such argument in support of the petition as the petitioner desires to present"
+**Look for**: Substantive argument supporting the claim that the court overlooked or misapprehended specific points.
+**Pass if**: Not a petition for rehearing, OR the petition contains a substantive argument section.
+**Fail if**: Petition for rehearing with no meaningful argument supporting the identified points.
+**Severity**: REJECT
+
 ##### CIT-002 — ND Case Citations: Pre/Post-1997 Compliance
 **Rule**: N.D.R.Ct. 11.6 — medium-neutral citations required for post-1997 ND opinions
 **Look for**: Whether the brief correctly applies the pre-1997 vs post-1997 distinction. Post-1997 opinions must include "YYYY ND ##" format. Pre-1997 opinions need only the N.W.2d citation.
@@ -691,6 +715,28 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **(c) Non-compliance.** Documents not in compliance with this rule will not be filed.
 
 **(d) Certificate of Compliance.** A brief must include a certificate by the attorney, or a self-represented party, that the document complies with the page limitation. The person preparing the certificate must rely on the page count of the filed electronic document. The certificate must state the number of pages in the document. An inaccurate certification may subject the filer to sanctions.
+
+### N.D.R.App.P. 40 — Petition for Rehearing
+
+**(a) Time to File; Content; Answer; Action by Court if Granted.**
+
+> **(1) Time.** A petition for rehearing may be filed within 14 days after entry of judgment unless the time is shortened or enlarged by order.
+
+> **(2) Contents.** The petition must state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended and must contain such argument in support of the petition as the petitioner desires to present. Oral argument is not permitted.
+
+> **(3) Answer.** No answer to a petition for rehearing is permitted unless the court requests one. The length of an answer must comply with the page limitation in (b).
+
+> **(4) Action by the Court.** If a petition for rehearing is granted, the court may do any of the following:
+
+> > (A) make a final disposition of the case without reargument;
+
+> > (B) restore it to the calendar for reargument or resubmission; or
+
+> > (C) issue any other appropriate order.
+
+**(b) Form of Petition; Length.** The petition must comply with Rule 32. The petition must include items required under Rule 28(b) that are applicable. A petition for rehearing may not exceed 10 pages, excluding any addendum. Footnotes and endnotes must be included in the page count.
+
+**(c) Service and Filing.** The petition must be served and filed as Rule 25 and Rule 31(b) prescribe.
 
 ### N.D.R.App.P. 34 — Oral Argument
 

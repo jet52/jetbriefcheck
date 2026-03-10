@@ -77,7 +77,7 @@ class TestLoadLocalVersion:
         assert "rule_hashes" in local_version
 
     def test_returns_expected_version(self, local_version):
-        assert local_version["version"] == "2.0.0"
+        assert local_version["version"] == "2.1.0"
 
     def test_returns_empty_dict_for_missing_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr("core.version_check.VERSION_FILE", tmp_path / "nope.json")
@@ -292,7 +292,7 @@ class TestRemoteVersionCheck:
             messages = check_remote_version(local_version)
             assert len(messages) >= 1
             assert "3.0.0" in messages[0]
-            assert "v2.0.0" in messages[0]
+            assert "v2.1.0" in messages[0]
 
     def test_check_remote_warns_on_newer_rules(self, local_version):
         remote = dict(local_version)

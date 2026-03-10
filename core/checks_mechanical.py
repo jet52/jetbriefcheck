@@ -589,10 +589,13 @@ def _check_page_limit(metadata: BriefMetadata) -> CheckResult:
         BriefType.CROSS_APPEAL: "PG-001",
         BriefType.REPLY: "PG-002",
         BriefType.AMICUS: "PG-003",
+        BriefType.PETITION_REHEARING: "PG-005",
     }
-    # Amicus page limit is in Rule 29(a)(5); all others in Rule 32(a)(8)
+    # Amicus page limit is in Rule 29(a)(5); rehearing in Rule 40(b);
+    # all others in Rule 32(a)(8)
     rule_map = {
         BriefType.AMICUS: "29(a)(5)",
+        BriefType.PETITION_REHEARING: "40(b)",
     }
     check_id = check_id_map.get(bt, "PG-001")
     rule = rule_map.get(bt, "32(a)(8)")
@@ -620,6 +623,21 @@ def _check_cover_color(metadata: BriefMetadata) -> CheckResult:
     We cannot detect physical cover color from PDF. This check is advisory.
     """
     from core.constants import COVER_COLORS
+
+    # Rehearing petitions: cover must match the petitioning party's principal
+    # brief color per Rule 32(a)(2). We can't determine the underlying party
+    # from the petition PDF alone.
+    if metadata.brief_type == BriefType.PETITION_REHEARING:
+        return CheckResult(
+            check_id="COV-001", name="Cover Color", rule="32(a)(2)",
+            passed=True, severity=Severity.CORRECTION,
+            message="Petition for rehearing cover must be the same color as the "
+                    "petitioning party's principal brief. Cannot verify from PDF; "
+                    "manual check required.",
+            details="Rule 32(a)(2): 'Covers of petitions for rehearing must be the "
+                    "same color as the petitioning party's principal brief.'",
+        )
+
     expected = COVER_COLORS.get(metadata.brief_type)
     if expected:
         return CheckResult(
@@ -639,6 +657,15 @@ def _check_cover_color(metadata: BriefMetadata) -> CheckResult:
 
 def _check_oral_argument(metadata: BriefMetadata) -> CheckResult:
     """COV-002: 'ORAL ARGUMENT REQUESTED' on cover."""
+    # Rule 40(a)(2): Oral argument is not permitted on petitions for rehearing
+    if metadata.brief_type == BriefType.PETITION_REHEARING:
+        return CheckResult(
+            check_id="COV-002", name="Oral Argument Notation", rule="40(a)(2)",
+            passed=True, severity=Severity.NOTE,
+            message="Not applicable — oral argument is not permitted on petitions for rehearing.",
+            applicable=False,
+        )
+
     cover = metadata.cover_text.upper()
     if "ORAL ARGUMENT" in cover:
         return CheckResult(

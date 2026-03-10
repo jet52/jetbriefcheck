@@ -39,6 +39,7 @@ PAGE_LIMITS = {
     BriefType.CROSS_APPEAL: 38,
     BriefType.REPLY: 12,
     BriefType.AMICUS: 19,
+    BriefType.PETITION_REHEARING: 10,
 }
 
 # Word limit for amicus rehearing brief

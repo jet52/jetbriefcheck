@@ -35,7 +35,7 @@ def main():
     parser = argparse.ArgumentParser(description="Check appellate brief PDF for compliance.")
     parser.add_argument("pdf", help="Path to the PDF file")
     parser.add_argument("--brief-type", default="auto",
-                        choices=["auto", "appellant", "appellee", "reply", "cross_appeal", "amicus"],
+                        choices=["auto", "appellant", "appellee", "reply", "cross_appeal", "amicus", "petition_rehearing"],
                         help="Brief type (default: auto-detect)")
     parser.add_argument("--output-dir", default=None,
                         help="Directory for output files (default: same as PDF)")

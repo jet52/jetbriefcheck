@@ -28,6 +28,7 @@ REQUIRED_RULES = [
     "rule-29.md",    # N.D.R.App.P. 29 — Brief of an Amicus Curiae
     "rule-32.md",    # N.D.R.App.P. 32 — Form of Briefs and Other Documents
     "rule-34.md",    # N.D.R.App.P. 34 — Oral Argument
+    "rule-40.md",    # N.D.R.App.P. 40 — Petition for Rehearing
     "rule-30.md",    # N.D.R.App.P. 30 — References to the Record
     "rule-3.4.md",   # N.D.R.Ct. 3.4 — Privacy Protection for Filings
     "rule-14.md",    # N.D.R.App.P. 14 — Identity Protection
@@ -166,6 +167,21 @@ SEMANTIC_CHECKS = [
     ("WRT-003", "Writ Petition: Exhibit Citation Format", "21(a)(3)(B)",
      None, Severity.NOTE,
      "Supporting documents should use (E{page}:{line/para}) format."),
+
+    # Rule 40(a)(2): petition for rehearing must state overlooked/misapprehended points
+    ("RHR-001", "Rehearing: Points Overlooked or Misapprehended", "40(a)(2)",
+     [BriefType.PETITION_REHEARING], Severity.REJECT,
+     "Petition must state with particularity each point of law or fact the court overlooked or misapprehended."),
+
+    # Rule 40(b): petition must include applicable items from Rule 28(b)
+    ("RHR-002", "Rehearing: Applicable Rule 28(b) Items", "40(b)",
+     [BriefType.PETITION_REHEARING], Severity.CORRECTION,
+     "Petition must include applicable items required under Rule 28(b) (e.g., TOC, TOA)."),
+
+    # Rule 40(a)(2): supporting argument present
+    ("RHR-003", "Rehearing: Supporting Argument", "40(a)(2)",
+     [BriefType.PETITION_REHEARING], Severity.REJECT,
+     "Petition must contain argument in support of the petition."),
 
     # N.D.R.Ct. 11.6: medium-neutral citation compliance (semantic)
     ("CIT-002", "ND Case Citations: Pre/Post-1997 Compliance", "N.D.R.Ct. 11.6",
@@ -355,6 +371,20 @@ Evaluation guidance:
 - WRT-003: Rule 21(a)(3)(B) specifies that supporting documents should be cited using the
   format (E{{page}}:{{line/para}}), e.g. (E6:12:¶3). If not a writ petition, pass
   automatically. If it is, check whether exhibit citations use this format.
+- RHR-001: Rule 40(a)(2) requires the petition to "state with particularity each point of law
+  or fact that the petitioner believes the court has overlooked or misapprehended." Look for
+  specific identification of points the court allegedly overlooked or misunderstood. The petition
+  should not merely reargue the case — it must identify particular points. If the petition is not
+  a petition for rehearing, pass automatically.
+- RHR-002: Rule 40(b) requires the petition to "include items required under Rule 28(b) that
+  are applicable." For a rehearing petition, the most commonly applicable items are a table of
+  contents (28(b)(1)) and table of authorities (28(b)(2)). Check whether the petition includes
+  these sections. A very short petition (a few pages) may reasonably omit a TOC/TOA. If the
+  petition is not a petition for rehearing, pass automatically.
+- RHR-003: Rule 40(a)(2) requires the petition to "contain such argument in support of the
+  petition as the petitioner desires to present." Look for a substantive argument section that
+  supports the claim that the court overlooked or misapprehended specific points. If the petition
+  is not a petition for rehearing, pass automatically.
 - CIT-002: N.D.R.Ct. 11.6 distinguishes pre-1997 and post-1997 ND Supreme Court opinions.
   Post-1997 opinions must include the medium-neutral citation (YYYY ND ##). Pre-1997
   opinions need only the N.W.2d citation. Check whether the brief correctly applies this
