@@ -13,8 +13,7 @@ triggers:
   - compliance check
   - check appellate brief
   - appellate brief
-  - legal brief review
-  - brief PDF
+  - brief review
   - ND rules compliance
 ---
 
@@ -42,6 +41,7 @@ fi
 ```
 
 If running in **PowerShell** (Windows without Git Bash):
+
 ```powershell
 $VENV_PYTHON = "$HOME\.claude\skills\jetbriefcheck\.venv\Scripts\python.exe"
 ```
@@ -126,6 +126,7 @@ $VENV_PYTHON scripts/build_report.py \
 ```
 
 The script will:
+
 1. Load mechanical results from the intermediate JSON
 2. Load semantic results from the semantic JSON
 3. Merge into a single results list
@@ -136,6 +137,7 @@ The script will:
 #### Phase 4: Report to User
 
 After Phase 3, report the findings to the user:
+
 - State the **recommendation** (Accept, Correction Letter, or Reject)
 - Summarize any **failed checks** grouped by severity
 - Provide the generated HTML report as a downloadable file
@@ -149,6 +151,7 @@ When PyMuPDF is not available, Claude performs semantic-only analysis by reading
 #### Phase 2F: Classify Brief Type
 
 Read the uploaded PDF directly. Examine the cover page to determine the brief type:
+
 - **Petition for Rehearing**: Cover says "Petition for Rehearing" or similar
 - **Appellant**: Cover says "Brief of Appellant" or similar
 - **Appellee**: Cover says "Brief of Appellee" or similar
@@ -236,31 +239,31 @@ All citations verified against the ND Rules of Appellate Procedure text.
 
 These are run by `check_brief.py` — no changes needed here.
 
-| ID | Check | Rule | Failed Severity |
-|---|---|---|---|
-| FMT-001 | Paper size 8.5 x 11" | 32(a)(4) | REJECT |
-| FMT-002 | Left margin >= 1.5" | 32(a)(4) | REJECT |
-| FMT-003 | Right margin >= 1" | 32(a)(4) | CORRECTION |
-| FMT-004 | Top margin >= 1" | 32(a)(4) | CORRECTION |
-| FMT-005 | Bottom margin >= 1" (excluding page numbers) | 32(a)(4) | CORRECTION |
-| FMT-006 | Font size >= 12pt | 32(a)(5) | REJECT | ⚠ High false-positive rate — flags small fonts in page numbers, headers, superscripts |
-| FMT-007 | Max 16 chars/inch | 32(a)(5) | CORRECTION |
-| FMT-008 | Plain roman style | 32(a)(6) | NOTE |
-| FMT-009 | Double-spaced body text | 32(a)(5) | CORRECTION |
-| FMT-010 | Footnotes double-spaced, same typeface | 32(a)(5) | NOTE |
-| FMT-011 | Pages numbered at bottom | 32(a)(4) | CORRECTION |
-| FMT-012 | Numbering starts with "1" on cover | 32(a)(4) | NOTE |
-| PG-001 | Principal brief <= 38 pages (excl. addendum) | 32(a)(8) | REJECT |
-| PG-002 | Reply brief <= 12 pages | 32(a)(8) | REJECT |
-| PG-003 | Amicus brief <= 19 pages | 29(a)(5) | REJECT |
-| PG-004 | Amicus rehearing <= 2,600 words | 29(b)(4) | REJECT |
-| PG-005 | Petition for rehearing <= 10 pages (excl. addendum) | 40(b) | REJECT |
-| COV-001 | Cover color matches brief type | 32(a)(2) | CORRECTION |
-| COV-002 | "ORAL ARGUMENT REQUESTED" on cover | 28(h)/34(a)(1)(C) | NOTE |
-| CNT-004 | Paragraphs numbered (arabic numerals) | 32(a)(7) | CORRECTION |
-| SEC-013 | Certificate of Compliance present | 32(d) | CORRECTION |
-| REC-001 | Record citations present (R#:#) format | 30(a) | NOTE |
-| CIT-001 | ND case citations: medium-neutral format | N.D.R.Ct. 11.6(b) | CORRECTION |
+| ID      | Check                                               | Rule              | Failed Severity |
+| ------- | --------------------------------------------------- | ----------------- | --------------- | ------------------------------------------------------------------------------------- |
+| FMT-001 | Paper size 8.5 x 11"                                | 32(a)(4)          | REJECT          |
+| FMT-002 | Left margin >= 1.5"                                 | 32(a)(4)          | REJECT          |
+| FMT-003 | Right margin >= 1"                                  | 32(a)(4)          | CORRECTION      |
+| FMT-004 | Top margin >= 1"                                    | 32(a)(4)          | CORRECTION      |
+| FMT-005 | Bottom margin >= 1" (excluding page numbers)        | 32(a)(4)          | CORRECTION      |
+| FMT-006 | Font size >= 12pt                                   | 32(a)(5)          | REJECT          | ⚠ High false-positive rate — flags small fonts in page numbers, headers, superscripts |
+| FMT-007 | Max 16 chars/inch                                   | 32(a)(5)          | CORRECTION      |
+| FMT-008 | Plain roman style                                   | 32(a)(6)          | NOTE            |
+| FMT-009 | Double-spaced body text                             | 32(a)(5)          | CORRECTION      |
+| FMT-010 | Footnotes double-spaced, same typeface              | 32(a)(5)          | NOTE            |
+| FMT-011 | Pages numbered at bottom                            | 32(a)(4)          | CORRECTION      |
+| FMT-012 | Numbering starts with "1" on cover                  | 32(a)(4)          | NOTE            |
+| PG-001  | Principal brief <= 38 pages (excl. addendum)        | 32(a)(8)          | REJECT          |
+| PG-002  | Reply brief <= 12 pages                             | 32(a)(8)          | REJECT          |
+| PG-003  | Amicus brief <= 19 pages                            | 29(a)(5)          | REJECT          |
+| PG-004  | Amicus rehearing <= 2,600 words                     | 29(b)(4)          | REJECT          |
+| PG-005  | Petition for rehearing <= 10 pages (excl. addendum) | 40(b)             | REJECT          |
+| COV-001 | Cover color matches brief type                      | 32(a)(2)          | CORRECTION      |
+| COV-002 | "ORAL ARGUMENT REQUESTED" on cover                  | 28(h)/34(a)(1)(C) | NOTE            |
+| CNT-004 | Paragraphs numbered (arabic numerals)               | 32(a)(7)          | CORRECTION      |
+| SEC-013 | Certificate of Compliance present                   | 32(d)             | CORRECTION      |
+| REC-001 | Record citations present (R#:#) format              | 30(a)             | NOTE            |
+| CIT-001 | ND case citations: medium-neutral format            | N.D.R.Ct. 11.6(b) | CORRECTION      |
 
 ### Semantic Checks (Claude Evaluation)
 
@@ -269,6 +272,7 @@ These checks are evaluated by Claude during the skill workflow. For each check, 
 #### Applicability by Brief Type
 
 Before evaluating, filter checks by brief type:
+
 - **All types**: SEC-001 through SEC-004, CNT-001, CNT-002, CNT-003, PRV-001, PRV-002 through PRV-006, WRT-001 through WRT-003, CIT-002
 - **Appellant only**: SEC-005, SEC-006, SEC-007, SEC-008, SEC-010, SEC-011
 - **Appellant + Appellee + Amicus**: SEC-009
@@ -286,6 +290,7 @@ If a check is not applicable to the brief type, mark it as `"passed": true, "app
 For each applicable check, evaluate as follows. Cross-reference the rule text in the Bundled Rules section below for exact rule language.
 
 ##### SEC-001 — Table of Contents Present
+
 **Rule**: 28(b)(1) — "a table of contents, with paragraph references"
 **Look for**: A section labeled "Table of Contents", "Contents", or similar near the beginning of the brief (typically after the cover page). The TOC should list the major sections/headings of the brief.
 **Pass if**: A TOC section exists with section headings listed.
@@ -293,6 +298,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### SEC-002 — TOC Uses Paragraph References
+
 **Rule**: 28(b)(1) — requires "paragraph references"
 **Look for**: Whether the TOC references use paragraph numbers (¶, ¶¶, [1], [2], etc.) as opposed to only page numbers. Under ND practice, briefs use paragraph numbering per Rule 32(a)(7), and the TOC should reference those paragraph numbers.
 **Pass if**: TOC entries include paragraph references (¶ symbols or bracketed numbers pointing to paragraph numbers in the body).
@@ -301,6 +307,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### SEC-003 — Table of Authorities Present
+
 **Rule**: 28(b)(2) — "a table of authorities—cases (alphabetically arranged), statutes, and other authorities—with references to the paragraphs in the brief"
 **Look for**: A section listing cases, statutes, and other authorities cited in the brief, typically after the TOC.
 **Pass if**: A TOA section exists listing authorities.
@@ -308,6 +315,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### SEC-004 — TOA: Cases Alphabetical, Paragraph Refs
+
 **Rule**: 28(b)(2)
 **Look for**: (1) Cases listed in alphabetical order. (2) References use paragraph numbers rather than only page numbers.
 **Pass if**: Cases appear alphabetical and references include paragraph numbers.
@@ -315,6 +323,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### SEC-005 — Jurisdictional Statement
+
 **Rule**: 28(b)(3) — applies only to original jurisdiction applications
 **Look for**: A statement of jurisdiction or basis for appellate jurisdiction. However, Rule 28(b)(3) specifically applies to "original proceedings" (original jurisdiction applications), not standard appeals.
 **Pass if**: This is a standard appeal (not an original jurisdiction proceeding) — passes automatically. OR, if an original proceeding, a jurisdictional statement is present.
@@ -323,6 +332,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### SEC-006 — Statement of Issues
+
 **Rule**: 28(b)(4) — "a statement of the issues presented for review"
 **Look for**: A section titled "Statement of Issues", "Issues Presented", "Issues", or similar, listing the legal questions the court is asked to decide.
 **Pass if**: An issues section exists with identifiable legal questions.
@@ -330,6 +340,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### SEC-007 — Statement of the Case
+
 **Rule**: 28(b)(5) — "a statement of the case briefly indicating the nature of the case, the course of the proceedings, and the disposition below"
 **Look for**: A section describing the procedural history — the nature of the case, what happened in the lower court, and the disposition being appealed.
 **Pass if**: A procedural history / statement of the case section exists.
@@ -337,6 +348,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### SEC-008 — Statement of Facts with Record References
+
 **Rule**: 28(b)(6) — "a statement of the facts relevant to the issues...with appropriate references to the record (see Rule 28(f))"
 **Look for**: (1) A Statement of Facts section. (2) References to the record — look for citations like "App. 15", "Doc. 23", "(R. 45)", "Tr. 112", appendix references, or similar record citations.
 **Pass if**: Facts section exists AND contains record references.
@@ -344,6 +356,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### SEC-009 — Argument Section Present
+
 **Rule**: 28(b)(7) — "the argument"
 **Look for**: A substantive section labeled "Argument" containing legal analysis with citations to authority.
 **Pass if**: An argument section with legal analysis is present.
@@ -351,6 +364,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### SEC-010 — Standard of Review Stated
+
 **Rule**: 28(b)(7)(B)(i) — "a concise statement of the applicable standard of review"
 **Look for**: Either a standalone "Standard of Review" section or standard-of-review language within the argument (e.g., "de novo", "clearly erroneous", "abuse of discretion", "reasonable doubt").
 **Pass if**: Standard of review is stated (either as a section or within the argument for each issue).
@@ -358,6 +372,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### SEC-011 — Preservation Citations
+
 **Rule**: 28(b)(7)(B)(ii) — "citation to the record showing that the issue was preserved for review; or a statement of grounds for seeking review of an issue not preserved"
 **Look for**: In the argument section, citations showing where each issue was raised below (e.g., "preserved at Tr. 45", "raised in motion at Doc. 12"), or a statement that the issue is raised for the first time on appeal with grounds for review (e.g., obvious error).
 **Pass if**: The argument includes preservation citations or addresses preservation.
@@ -365,6 +380,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: NOTE
 
 ##### SEC-012 — Conclusion with Precise Relief
+
 **Rule**: 28(b)(7)(D) — "a short conclusion stating the precise relief sought"
 **Look for**: A "Conclusion" section that states what the party wants the court to do (e.g., "reverse and remand", "affirm the judgment", "reverse with instructions to dismiss").
 **Pass if**: Conclusion exists and states specific relief sought.
@@ -372,6 +388,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### SEC-014 — Amicus: Identity/Interest Statement
+
 **Rule**: 29(a)(4)(C) — "a concise statement of the identity of the amicus curiae, and its interest in the case"
 **Look for**: A section identifying who the amicus is and why they have an interest in the case.
 **Pass if**: Identity and interest statement is present.
@@ -379,6 +396,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### SEC-015 — Amicus: Disclosure Statement
+
 **Rule**: 29(a)(4)(D) — disclosure of authorship and funding
 **Look for**: A statement disclosing whether a party or party's counsel authored the brief and whether anyone other than the amicus or its counsel made a monetary contribution to the preparation or submission of the brief.
 **Pass if**: Disclosure statement present.
@@ -386,6 +404,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### CNT-001 — Party References Use Actual Names
+
 **Rule**: 28(e) — "counsel should use the parties' actual names or the designations used in the lower court"
 **Look for**: Whether the brief predominantly uses actual party names (e.g., "Smith", "Kawasaki", "the City") versus procedural labels ("Appellant", "Appellee").
 **Pass if**: The brief primarily uses actual names or lower-court designations. Occasional use of "Appellant"/"Appellee" for clarity is acceptable.
@@ -394,6 +413,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### CNT-002 — Brief Is Concise, No Irrelevant Matter
+
 **Rule**: 28(l) — "must be concise...free from burdensome, irrelevant or immaterial matters"
 **Look for**: Whether the brief contains obviously irrelevant, scandalous, or excessively repetitive material.
 **Pass if**: The brief appears focused and relevant. Most briefs pass this check.
@@ -402,6 +422,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: NOTE
 
 ##### CNT-003 — Statutes/Rules in Brief or Addendum
+
 **Rule**: 28(g) — "the relevant parts must be set out in the brief or in an addendum"
 **Look for**: If the brief discusses statutes, rules, or regulations, whether the relevant text is included in the brief body or in an addendum.
 **Pass if**: Relevant statutes/rules are quoted or an addendum contains them, OR the brief does not involve statutory interpretation requiring the text.
@@ -409,6 +430,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: NOTE
 
 ##### PRV-001 — Privacy: Minor Names Redacted
+
 **Rule**: N.D.R.Ct. 3.4(b)(1)(C) — "the name of an individual known to be a minor" must be redacted to "the minor's initials"
 **Cross-reference**: Rule 14(a)(5) also requires minor children to be referred to by initials. PRV-001 covers this obligation under both rules.
 **Look for**: Whether the brief uses the full first or last name of any individual known to be a minor. Minors should be identified only by initials (e.g., "H.R.", "A.R.") throughout the brief. Check for inconsistent usage where initials are used in some places but full names appear elsewhere.
@@ -418,6 +440,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### REC-002 — Record Citation Format
+
 **Rule**: 30(b)(1) — record citations must use the format (R{index}:{page}), e.g. (R156:12)
 **Look for**: Whether record references consistently use the (R#:#) format. Note any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead.
 **Pass if**: Record citations consistently use the (R#:#) format, or the brief uses a close variant (e.g., [R156:12]).
@@ -426,6 +449,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### REC-003 — Record Citations Identify Items
+
 **Rule**: 30(a) — record references must include "information identifying the item, for example 'Statement of John Doe'"
 **Look for**: Whether record citations provide enough context to identify what is being cited, either in the surrounding text or in the citation itself.
 **Pass if**: Record citations are generally accompanied by identifying context (e.g., "Dr. Smith's deposition (R45:12)", "the district court's order (R102:1)").
@@ -434,6 +458,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: NOTE
 
 ##### PRV-002 — Identity Protection: Mental Health Respondent
+
 **Rule**: 14(a)(1) — respondent in a mental health proceeding must be referred to by initials only
 **Look for**: First determine if this is a mental health case (indicators: "mental health commitment", "treatment order", N.D.C.C. ch. 25-03.1). If not, pass automatically. If it is, check whether the respondent's full name appears anywhere — it should be initials only.
 **Pass if**: Not a mental health case, OR respondent consistently uses initials.
@@ -441,6 +466,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### PRV-003 — Identity Protection: Guardianship/Conservatorship
+
 **Rule**: 14(a)(2) — respondent and family members in guardianship/conservatorship must use initials
 **Look for**: Determine if this is a guardianship or conservatorship case. If not, pass automatically. If it is, check that the respondent and family members use initials only.
 **Pass if**: Not a guardianship/conservatorship case, OR all protected individuals use initials.
@@ -448,6 +474,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### PRV-004 — Identity Protection: Juvenile Respondent
+
 **Rule**: 14(a)(3) — respondent in a juvenile proceeding must use initials
 **Look for**: Determine if this is a juvenile case (indicators: "juvenile", "delinquent", N.D.C.C. ch. 27-20). If not, pass automatically. If it is, check that the juvenile respondent uses initials.
 **Pass if**: Not a juvenile case, OR juvenile respondent consistently uses initials.
@@ -455,6 +482,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### PRV-005 — Identity Protection: TPR Proceedings
+
 **Rule**: 14(a)(4) — child and family members in TPR proceedings must use initials
 **Look for**: Determine if this is a termination of parental rights case ("TPR", "termination of parental rights"). If not, pass automatically. If it is, check that the child and family members use initials.
 **Pass if**: Not a TPR case, OR all protected individuals use initials.
@@ -462,6 +490,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### PRV-006 — Identity Protection: Sexual Offense Victim
+
 **Rule**: 14(a)(6) — victim or alleged victim of a sexual offense must use initials
 **Look for**: Determine if the case involves a sexual offense (sexual assault, rape, gross sexual imposition, N.D.C.C. ch. 12.1-20). If not, pass automatically. If it is, check that the victim is referred to by initials only.
 **Pass if**: Not a sexual offense case, OR victim consistently uses initials.
@@ -469,6 +498,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### WRT-001 — Writ Petition: Required Content
+
 **Rule**: 21(a)(2) — petition must state relief sought, issues, facts, and reasons
 **Look for**: First determine if this is a writ petition (indicators: "supervisory writ", "writ of mandamus", "writ of prohibition", "extraordinary writ"). If not, pass automatically. If it is, check that the petition states (A) relief sought, (B) issues presented, (C) necessary facts, and (D) reasons why a writ should issue.
 **Pass if**: Not a writ petition, OR all four elements are present.
@@ -476,6 +506,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### WRT-002 — Writ Petition: Supporting Documents
+
 **Rule**: 21(a)(3) — petition must include supporting documents
 **Look for**: If not a writ petition, pass automatically. If it is, check whether supporting documents (orders, record excerpts) are referenced or attached as exhibits.
 **Pass if**: Not a writ petition, OR supporting documents are included.
@@ -483,6 +514,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### WRT-003 — Writ Petition: Exhibit Citation Format
+
 **Rule**: 21(a)(3)(B) — supporting documents should use (E{page}:{line/para}) format
 **Look for**: If not a writ petition, pass automatically. If it is, check whether exhibit citations use the (E#:#) format, e.g. (E6:12:¶3).
 **Pass if**: Not a writ petition, OR exhibit citations use proper format.
@@ -491,6 +523,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: NOTE
 
 ##### RHR-001 — Rehearing: Points Overlooked or Misapprehended
+
 **Rule**: 40(a)(2) — "state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended"
 **Look for**: Specific identification of points of law or fact the petitioner claims the court overlooked or misunderstood. The petition should not merely reargue the case.
 **Pass if**: Not a petition for rehearing, OR the petition identifies specific points with particularity.
@@ -498,6 +531,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### RHR-002 — Rehearing: Applicable Rule 28(b) Items
+
 **Rule**: 40(b) — "must include items required under Rule 28(b) that are applicable"
 **Look for**: Whether the petition includes applicable Rule 28(b) items, particularly a table of contents (28(b)(1)) and table of authorities (28(b)(2)). For short petitions (under ~5 pages), the absence of a TOC/TOA may be reasonable.
 **Pass if**: Not a petition for rehearing, OR the petition includes applicable Rule 28(b) items (or is short enough that their absence is reasonable).
@@ -505,6 +539,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 ##### RHR-003 — Rehearing: Supporting Argument
+
 **Rule**: 40(a)(2) — "must contain such argument in support of the petition as the petitioner desires to present"
 **Look for**: Substantive argument supporting the claim that the court overlooked or misapprehended specific points.
 **Pass if**: Not a petition for rehearing, OR the petition contains a substantive argument section.
@@ -512,6 +547,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: REJECT
 
 ##### CIT-002 — ND Case Citations: Pre/Post-1997 Compliance
+
 **Rule**: N.D.R.Ct. 11.6 — medium-neutral citations required for post-1997 ND opinions
 **Look for**: Whether the brief correctly applies the pre-1997 vs post-1997 distinction. Post-1997 opinions must include "YYYY ND ##" format. Pre-1997 opinions need only the N.W.2d citation.
 **Pass if**: Citations correctly distinguish pre- and post-1997 cases.
