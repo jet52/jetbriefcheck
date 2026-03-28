@@ -26,17 +26,19 @@ pytest tests/
 ## Architecture
 
 - **`app.py`** — Flask entry point (web interface)
-- **`core/`** — Analysis engine:
-  - `pdf_extract.py` — Extract text/images, measure formatting via PyMuPDF
-  - `brief_classifier.py` — Detect brief type (appellant, appellee, reply, amicus, petition for rehearing)
-  - `checks_mechanical.py` — Paper size, margins, fonts, spacing, page limits
-  - `checks_semantic.py` — Required sections, adequate content
-  - `report_builder.py` — Generate HTML compliance report
-  - `models.py` — Data structures for checks and results
-  - `recommender.py` — Accept/Correction Letter/Reject determination
-- **`references/rules/`** — Bundled rule text: N.D.R.App.P. 14, 21, 28, 29, 30, 32, 34, 40; N.D.R.Ct. 3.4, 11.6
+- **`skill/`** — Deployable skill content (symlinked to `~/.claude/skills/jetbriefcheck/`):
+  - `SKILL.md` — Claude Code skill workflow definition
+  - `core/` — Analysis engine:
+    - `pdf_extract.py` — Extract text/images, measure formatting via PyMuPDF
+    - `brief_classifier.py` — Detect brief type (appellant, appellee, reply, amicus, petition for rehearing)
+    - `checks_mechanical.py` — Paper size, margins, fonts, spacing, page limits
+    - `checks_semantic.py` — Required sections, adequate content
+    - `report_builder.py` — Generate HTML compliance report
+    - `models.py` — Data structures for checks and results
+    - `recommender.py` — Accept/Correction Letter/Reject determination
+  - `scripts/` — CLI entry points for skill pipeline
+  - `references/rules/` — Bundled rule text: N.D.R.App.P. 14, 21, 28, 29, 30, 32, 34, 40; N.D.R.Ct. 3.4, 11.6
 - **`web/`** — Flask templates and static assets
-- **`SKILL.md`** — Claude Code skill workflow definition
 
 ## Key Details
 

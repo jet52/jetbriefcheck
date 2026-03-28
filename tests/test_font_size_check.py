@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_DIR))
+sys.path.insert(0, str(PROJECT_DIR / "skill"))
 
 from core.constants import FONT_NONCOMPLIANT_THRESHOLD, FONT_SIZE_TOLERANCE, MIN_FONT_SIZE_PT
 from core.checks_mechanical import (

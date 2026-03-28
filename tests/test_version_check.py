@@ -24,7 +24,7 @@ import pytest
 # Ensure project root is importable
 import sys
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_DIR))
+sys.path.insert(0, str(PROJECT_DIR / "skill"))
 
 from core.version_check import (
     BUNDLED_EFFECTIVE_DATES,

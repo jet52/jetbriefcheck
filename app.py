@@ -1,6 +1,10 @@
 """Flask entry point for the appellate brief compliance checker."""
 
 import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "skill"))
 
 from flask import Flask
 

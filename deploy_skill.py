@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Deploy the jetbriefcheck skill to Claude Code's skills directory.
 
-Copies skill files (SKILL.md, scripts/, references/, core/, .venv/, requirements.txt)
-from this repo into ~/.claude/skills/jetbriefcheck/.
-
-Works on macOS, Linux, and Windows — no symlinks required.
+Copies skill/ contents into ~/.claude/skills/jetbriefcheck/.
+Only needed on machines without the symlink setup.
 
 Run from anywhere:
     python deploy_skill.py
@@ -17,7 +15,6 @@ import sys
 from pathlib import Path
 
 SKILL_NAME = "jetbriefcheck"
-COPY_ITEMS = ["SKILL.md", "scripts", "references", "core", "requirements.txt", "version.json", "check_update.py"]
 
 
 def _get_skills_dir() -> Path:
@@ -29,10 +26,11 @@ def _get_skills_dir() -> Path:
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parent
+    skill_src = repo_root / "skill"
     target = _get_skills_dir() / SKILL_NAME
 
-    if not (repo_root / "SKILL.md").exists():
-        print("Error: SKILL.md not found in repo root.", file=sys.stderr)
+    if not (skill_src / "SKILL.md").exists():
+        print("Error: skill/SKILL.md not found.", file=sys.stderr)
         sys.exit(1)
 
     # Remove old symlink if present (migration from previous deploy method)
@@ -40,26 +38,11 @@ def main() -> None:
         print(f"Removing old symlink: {target}")
         target.unlink()
 
-    target.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        shutil.rmtree(target)
 
-    for item_name in COPY_ITEMS:
-        src = repo_root / item_name
-        dst = target / item_name
-        if not src.exists():
-            continue
-        if dst.exists():
-            if dst.is_dir():
-                shutil.rmtree(dst)
-            else:
-                dst.unlink()
-        if src.is_dir():
-            shutil.copytree(src, dst)
-        else:
-            shutil.copy2(src, dst)
-        print(f"  Copied: {item_name}")
-
-    print(f"\nDeployed to {target}")
-    print("Re-run after repo changes to sync.")
+    shutil.copytree(skill_src, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    print(f"Deployed to {target}")
 
 
 if __name__ == "__main__":
