@@ -238,3 +238,14 @@ python3 skill/scripts/check_rule_freshness.py
 ```
 
 When a rule is flagged as stale, update the bundled `.md` file, update `BUNDLED_EFFECTIVE_DATES` in `skill/core/version_check.py`, recompute hashes in `skill/version.json`, and bump `rules_verified`.
+
+## Contributing
+
+On a fresh clone, activate the local pre-push sensitive-content check:
+
+```bash
+git config --local core.hooksPath .githooks
+```
+
+It scans commits being pushed for likely ND court dockets, confidential-case
+captions, and committed binaries. Bypass once with `git push --no-verify`.
