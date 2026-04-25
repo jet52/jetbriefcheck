@@ -145,7 +145,7 @@ def api_analyze():
 def _run_analysis(filepath: str, brief_type_override: str | None = None) -> ComplianceReport:
     """Run the full analysis pipeline on a PDF."""
     api_key = current_app.config.get("ANTHROPIC_API_KEY", "")
-    model = current_app.config.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
+    model = current_app.config.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
     # Extract PDF metadata
     metadata = extract_brief(filepath)

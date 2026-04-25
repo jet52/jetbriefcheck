@@ -177,7 +177,7 @@ def _load_rules_text() -> str:
 def run_semantic_checks(
     metadata: BriefMetadata,
     api_key: Optional[str] = None,
-    model: str = "claude-sonnet-4-5-20250929",
+    model: str = "claude-sonnet-4-6",
 ) -> list[CheckResult]:
     """Run semantic checks via Claude API.
 
