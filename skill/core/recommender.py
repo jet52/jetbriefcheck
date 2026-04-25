@@ -18,7 +18,7 @@ from core.models import CheckResult, ComplianceReport, Recommendation, Severity
 def compute_recommendation(
     results: list[CheckResult],
     api_key: Optional[str] = None,
-    model: str = "claude-sonnet-4-5-20250929",
+    model: str = "claude-sonnet-4-6",
     use_claude_weighting: bool = True,
 ) -> tuple[Recommendation, str]:
     """Compute the final recommendation from check results.
@@ -63,7 +63,7 @@ def _claude_weighting_pass(
     results: list[CheckResult],
     hard_rec: Recommendation,
     api_key: Optional[str] = None,
-    model: str = "claude-sonnet-4-5-20250929",
+    model: str = "claude-sonnet-4-6",
 ) -> tuple[Recommendation, str]:
     """Use Claude to weigh borderline cases.
 

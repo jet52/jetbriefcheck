@@ -44,7 +44,7 @@ def main():
     parser.add_argument("--mechanical-only", action="store_true",
                         help="Run only extraction + mechanical checks; dump intermediate JSON (no API calls)")
     parser.add_argument("--model", default=None,
-                        help="Claude model to use (default: from env or claude-sonnet-4-5-20250929)")
+                        help="Claude model to use (default: from env or claude-sonnet-4-6)")
     parser.add_argument("--skip-version-check", action="store_true",
                         help="Skip remote version check")
     args = parser.parse_args()
@@ -122,7 +122,7 @@ def main():
     from core.version_check import get_version_stamp
 
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    model = args.model or os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
+    model = args.model or os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
     # Semantic checks
     sem_results = []
