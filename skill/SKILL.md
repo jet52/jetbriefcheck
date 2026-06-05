@@ -122,8 +122,11 @@ Run the report builder to merge results and generate the HTML report:
 ```bash
 $VENV_PYTHON scripts/build_report.py \
   --intermediate "<intermediate-json-path>" \
-  --semantic "<semantic-json-path>"
+  --semantic "<semantic-json-path>" \
+  --model "{runtime model — friendly name and exact ID, e.g. Claude Opus 4.8 (claude-opus-4-8)}"
 ```
+
+Pass `--model` with the Claude model identifier from your runtime context (friendly name plus exact model ID). It is recorded in the report footer for provenance — so reports remain comparable as the model and the skill change. The skill version and the report generation date are already stamped automatically (the footer version stamp and the Date row); supply only the model. Do not have the model guess its own identifier from training — use the runtime value.
 
 The script will:
 

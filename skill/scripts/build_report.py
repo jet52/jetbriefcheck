@@ -156,6 +156,7 @@ def main():
     parser.add_argument("--reasoning", default=None, help="Optional reasoning text for the report summary")
     parser.add_argument("--pymupdf", action="store_true", default=True, help="PyMuPDF was used for mechanical checks (default)")
     parser.add_argument("--no-pymupdf", action="store_false", dest="pymupdf", help="PyMuPDF was NOT used (fallback mode)")
+    parser.add_argument("--model", default="", help='Claude model identifier for the report footer, e.g. "Claude Opus 4.8 (claude-opus-4-8)". Supplied by the runtime; recorded for provenance.')
     args = parser.parse_args()
 
     intermediate_path = Path(args.intermediate)
@@ -215,7 +216,7 @@ def main():
         pymupdf_used=args.pymupdf,
     )
 
-    html = build_html_report(report, version_stamp=get_version_stamp())
+    html = build_html_report(report, version_stamp=get_version_stamp(), model=args.model)
 
     pdf_source = Path(intermediate["pdf_path"])
     output_dir = Path(args.output_dir) if args.output_dir else pdf_source.parent
