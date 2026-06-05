@@ -2,6 +2,19 @@
 
 Checks appellate brief PDFs for compliance with the North Dakota Rules of Appellate Procedure and produces an HTML compliance report with a recommended action: **Accept**, **Correction Letter**, or **Reject**.
 
+## Not an Official Court Product
+
+JetBriefCheck is an independent, open-source project published by an individual in
+a personal capacity as legal-educational software, consistent with Rule 3.1 of the
+North Dakota Code of Judicial Conduct. It is not authorized, endorsed, or maintained
+by the North Dakota Supreme Court, the Clerk of the Supreme Court, or the state court
+system, and is being developed without court staff, equipment, or resources. Its
+compliance report and recommended action (Accept, Correction Letter, or Reject) are
+machine-generated and are not the determination of the Clerk or the Court — only the
+Clerk and the Court decide whether a brief is accepted, returned for correction, or
+rejected. Verify results against the current North Dakota Rules of Appellate
+Procedure. It is not legal advice.
+
 ---
 ## Installing the Skill in Claude (Desktop)
 
