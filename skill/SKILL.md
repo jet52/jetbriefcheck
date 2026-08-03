@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 2.1.1
+version: 2.1.2
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -29,24 +29,23 @@ Analyzes an appellate brief PDF against the North Dakota Rules of Appellate Proc
 
 This skill is self-contained. All rule text and check definitions are bundled below — no external file reads are required.
 
-## Platform Detection
+## Python Environment (Bootstrap)
 
-At the start of each CLI session, set variables for platform-dependent paths. **Do not use `$(uname)` or other command substitution** — it triggers unnecessary permission prompts. Instead, check for platform-specific files directly:
+At the start of each CLI session, run the bootstrap script once with any system Python (`python3`, or `python` on Windows/PowerShell):
 
 ```bash
-VENV_PYTHON=~/.claude/skills/jetbriefcheck/.venv/bin/python
-if [ -f ~/.claude/skills/jetbriefcheck/.venv/Scripts/python.exe ]; then
-  VENV_PYTHON=~/.claude/skills/jetbriefcheck/.venv/Scripts/python.exe
-fi
+python3 "${CLAUDE_SKILL_DIR}/bootstrap_env.py"
 ```
 
-If running in **PowerShell** (Windows without Git Bash):
+(`${CLAUDE_SKILL_DIR}` here and below is replaced by the harness with this skill's absolute directory — standalone install, plugin cache, or Cowork mount alike — before you read this file; the commands you see contain a literal path. Keep paths double-quoted; on Windows the path may contain spaces.)
 
-```powershell
-$VENV_PYTHON = "$HOME\.claude\skills\jetbriefcheck\.venv\Scripts\python.exe"
+The script finds or builds the skill's virtual environment (prebuilt `.venv` in the skill dir → cached venv under `~/.cache/jet-skills/jetbriefcheck/<version>/` → temp-dir venv) and prints one line:
+
+```
+VENV_PYTHON=<absolute path>
 ```
 
-Use `$VENV_PYTHON` in all subsequent commands instead of hardcoded `python3`.
+**Capture that path as a literal string** and use it in place of `$VENV_PYTHON` in every Python command below — no command substitution. The venv provides `PyMuPDF`. If the script exits 1 (no writable location, or no network for the first build), proceed with the semantic-only fallback path described in Phase 1 — mechanical checks need PyMuPDF.
 
 ## Workflow
 
@@ -54,7 +53,7 @@ The user uploads a PDF via drag-and-drop. Save the uploaded file to a temporary 
 
 ### Phase 0: Update Check and Save the Uploaded PDF
 
-**Update check:** Run `python3 ~/.claude/skills/jetbriefcheck/check_update.py` silently. If it prints output, include it as a note to the user.
+**Update check:** Run `python3 "${CLAUDE_SKILL_DIR}/check_update.py"` silently. If it prints output, include it as a note to the user.
 
 Save the uploaded file to the current working directory, preserving its original filename:
 
