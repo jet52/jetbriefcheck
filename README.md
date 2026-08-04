@@ -231,10 +231,11 @@ The full text of the following rules is bundled in `skill/references/rules/`:
 | `rule-30.md` | N.D.R.App.P. 30 | References to the Record |
 | `rule-32.md` | N.D.R.App.P. 32 | Form of Briefs and Other Documents |
 | `rule-34.md` | N.D.R.App.P. 34 | Oral Argument |
+| `rule-40.md` | N.D.R.App.P. 40 | Petition for Rehearing |
 | `rule-3.4.md` | N.D.R.Ct. 3.4 | Privacy Protection for Filings |
 | `rule-11.6.md` | N.D.R.Ct. 11.6 | Medium-Neutral Case Citations |
 
-Rules were last verified current against ndcourts.gov on **2026-03-07**.
+Rules were last verified current against ndcourts.gov on **2026-08-04**.
 
 ## Rule Freshness Checking
 
