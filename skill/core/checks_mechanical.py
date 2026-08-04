@@ -589,12 +589,14 @@ def _check_page_limit(metadata: BriefMetadata) -> CheckResult:
         BriefType.CROSS_APPEAL: "PG-001",
         BriefType.REPLY: "PG-002",
         BriefType.AMICUS: "PG-003",
+        BriefType.AMICUS_REHEARING: "PG-004",
         BriefType.PETITION_REHEARING: "PG-005",
     }
-    # Amicus page limit is in Rule 29(a)(5); rehearing in Rule 40(b);
-    # all others in Rule 32(a)(8)
+    # Amicus page limit is in Rule 29(a)(5); amicus on rehearing in Rule
+    # 29(b)(4); rehearing petition in Rule 40(b); all others in Rule 32(a)(8)
     rule_map = {
         BriefType.AMICUS: "29(a)(5)",
+        BriefType.AMICUS_REHEARING: "29(b)(4)",
         BriefType.PETITION_REHEARING: "40(b)",
     }
     check_id = check_id_map.get(bt, "PG-001")
@@ -658,7 +660,7 @@ def _check_cover_color(metadata: BriefMetadata) -> CheckResult:
 def _check_oral_argument(metadata: BriefMetadata) -> CheckResult:
     """COV-002: 'ORAL ARGUMENT REQUESTED' on cover."""
     # Rule 40(a)(2): Oral argument is not permitted on petitions for rehearing
-    if metadata.brief_type == BriefType.PETITION_REHEARING:
+    if metadata.brief_type in (BriefType.PETITION_REHEARING, BriefType.AMICUS_REHEARING):
         return CheckResult(
             check_id="COV-002", name="Oral Argument Notation", rule="40(a)(2)",
             passed=True, severity=Severity.NOTE,

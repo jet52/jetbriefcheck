@@ -22,7 +22,10 @@ def classify_brief(metadata: BriefMetadata) -> BriefType:
 
     Three-pass approach:
       Pass 0: Check for "petition for rehearing" — this is distinctive
-              and should be detected before any brief-type logic.
+              and should be detected before any brief-type logic. An amicus
+              brief filed on rehearing names the petition on its cover too,
+              so an amicus signal there wins: Rule 29(b) governs it, not
+              Rule 40.
       Pass 1: Look for "X brief" or "brief of X" phrases — this is the
               primary signal and avoids false matches on party labels.
       Pass 2: Fall back to standalone party labels only if pass 1 finds nothing.
@@ -33,6 +36,8 @@ def classify_brief(metadata: BriefMetadata) -> BriefType:
 
     # ---- Pass 0: petition for rehearing ----
     if _match_petition_rehearing(text):
+        if _match_amicus(text):
+            return BriefType.AMICUS_REHEARING
         return BriefType.PETITION_REHEARING
 
     # ---- Pass 1: phrases tied to "brief" ----
@@ -158,6 +163,26 @@ def _match_petition_rehearing(text: str) -> bool:
     return False
 
 
+def _match_amicus(text: str) -> bool:
+    """Detect an amicus curiae brief by an amicus term adjacent to 'brief'.
+
+    Requiring adjacency to "brief" keeps a passing mention of an amicus in
+    another party's filing from tipping the classification.
+    """
+    if re.search(rf"am[il1!|].?c[ue][sz].{{0,20}}{_BR}", text):
+        return True
+    if re.search(rf"{_BR}.{{0,20}}am[il1!|].?c[ue][sz]", text):
+        return True
+    if re.search(rf"friend.{{0,5}}(of\s+)?(the\s+)?court.{{0,15}}{_BR}", text):
+        return True
+    if re.search(rf"{_BR}.{{0,15}}friend.{{0,5}}(of\s+)?(the\s+)?court", text):
+        return True
+    # "amicus brief" (without "curiae")
+    if re.search(rf"am[il1!|].?c[ue][sz]\s+{_BR}", text):
+        return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Pass 1: Match "X brief" / "brief of X" phrases
 # ---------------------------------------------------------------------------
@@ -166,16 +191,7 @@ def _match_brief_phrase(text: str) -> BriefType:
     """Look for party-type words adjacent to 'brief'."""
 
     # --- Amicus ---
-    if re.search(rf"am[il1!|].?c[ue][sz].{{0,20}}{_BR}", text):
-        return BriefType.AMICUS
-    if re.search(rf"{_BR}.{{0,20}}am[il1!|].?c[ue][sz]", text):
-        return BriefType.AMICUS
-    if re.search(rf"friend.{{0,5}}(of\s+)?(the\s+)?court.{{0,15}}{_BR}", text):
-        return BriefType.AMICUS
-    if re.search(rf"{_BR}.{{0,15}}friend.{{0,5}}(of\s+)?(the\s+)?court", text):
-        return BriefType.AMICUS
-    # "amicus brief" (without "curiae")
-    if re.search(rf"am[il1!|].?c[ue][sz]\s+{_BR}", text):
+    if _match_amicus(text):
         return BriefType.AMICUS
 
     # --- Reply ---

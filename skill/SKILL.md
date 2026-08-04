@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 2.1.2
+version: 2.2.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -69,7 +69,7 @@ All intermediate and output files use the PDF stem in their names to avoid colli
 Run the check script in mechanical-only mode. This makes **no API calls**:
 
 ```bash
-$VENV_PYTHON scripts/check_brief.py "<filename>.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus|petition_rehearing]
+$VENV_PYTHON scripts/check_brief.py "<filename>.pdf" --mechanical-only [--brief-type auto|appellant|appellee|reply|cross_appeal|amicus|amicus_rehearing|petition_rehearing]
 ```
 
 - **If the script succeeds**: Capture the intermediate JSON file path from stdout. Continue to **Phase 2 (Full Mode)**.
@@ -154,6 +154,7 @@ When PyMuPDF is not available, Claude performs semantic-only analysis by reading
 
 Read the uploaded PDF directly. Examine the cover page to determine the brief type:
 
+- **Amicus on Rehearing**: Cover names both an amicus and a petition for rehearing (e.g., "Brief of Amicus Curiae in Support of Petition for Rehearing"). Rule 29(b) governs, not Rule 40 — check this before Petition for Rehearing.
 - **Petition for Rehearing**: Cover says "Petition for Rehearing" or similar
 - **Appellant**: Cover says "Brief of Appellant" or similar
 - **Appellee**: Cover says "Brief of Appellee" or similar
@@ -258,7 +259,7 @@ These are run by `check_brief.py` — no changes needed here.
 | PG-001  | Principal brief <= 38 pages (excl. addendum)        | 32(a)(8)          | REJECT          |
 | PG-002  | Reply brief <= 12 pages                             | 32(a)(8)          | REJECT          |
 | PG-003  | Amicus brief <= 19 pages                            | 29(a)(5)          | REJECT          |
-| PG-004  | Amicus rehearing <= 2,600 words                     | 29(b)(4)          | REJECT          |
+| PG-004  | Amicus rehearing brief <= 10 pages                  | 29(b)(4)          | REJECT          |
 | PG-005  | Petition for rehearing <= 10 pages (excl. addendum) | 40(b)             | REJECT          |
 | COV-001 | Cover color matches brief type                      | 32(a)(2)          | CORRECTION      |
 | COV-002 | "ORAL ARGUMENT REQUESTED" on cover                  | 28(h)/34(a)(1)(C) | NOTE            |
@@ -277,10 +278,10 @@ Before evaluating, filter checks by brief type:
 
 - **All types**: SEC-001 through SEC-004, CNT-001, CNT-002, CNT-003, PRV-001, PRV-002 through PRV-006, WRT-001 through WRT-003, CIT-002
 - **Appellant only**: SEC-005, SEC-006, SEC-007, SEC-008, SEC-010, SEC-011
-- **Appellant + Appellee + Amicus**: SEC-009
+- **Appellant + Appellee + Amicus (incl. Amicus on Rehearing)**: SEC-009
 - **Appellant + Appellee**: SEC-012
 - **Appellant + Appellee + Cross-appeal**: REC-002, REC-003
-- **Amicus only**: SEC-014, SEC-015
+- **Amicus + Amicus on Rehearing only**: SEC-014, SEC-015 (Rule 29(b)(4) applies paragraph (a)(4) to a rehearing amicus)
 - **Petition for Rehearing only**: RHR-001, RHR-002, RHR-003
 
 Note: PRV-002–006, WRT-001–003, and CIT-002 are applicable to all brief types but auto-pass when the case type or document type doesn't trigger them (e.g., WRT checks auto-pass if the document is not a writ petition).
@@ -542,7 +543,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 ##### RHR-003 — Rehearing: Supporting Argument
 
-**Rule**: 40(a)(2) — "must contain such argument in support of the petition as the petitioner desires to present"
+**Rule**: 40(a)(2) — "must argue in support of the petition"
 **Look for**: Substantive argument supporting the claim that the court overlooked or misapprehended specific points.
 **Pass if**: Not a petition for rehearing, OR the petition contains a substantive argument section.
 **Fail if**: Petition for rehearing with no meaningful argument supporting the identified points.
@@ -680,9 +681,9 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 > (2) When Permitted. An amicus curiae may file a brief only by leave of court.
 
-> (3) Motion for Leave to File. Rule 29(a)(3) applies to a motion for leave.
+> (3) Motion for Leave to File. Paragraph (a)(3) applies to a motion for leave.
 
-> (4) Contents, Form, and Length. Rule 29(a)(4) applies to the amicus brief. The brief must not exceed 2,600 words.
+> (4) Contents, Form, and Length. Paragraph (a)(4) applies to the amicus brief. The brief must not exceed 10 pages.
 
 > (5) Time for Filing. An amicus curiae supporting the petition for rehearing or supporting neither party must file its brief, accompanied by a motion for filing when necessary, no later than 7 days after the petition is filed. An amicus curiae opposing the petition must file its brief, accompanied by a motion for filing when necessary, no later than the date set by the court for the response.
 
@@ -760,21 +761,21 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 > **(1) Time.** A petition for rehearing may be filed within 14 days after entry of judgment unless the time is shortened or enlarged by order.
 
-> **(2) Contents.** The petition must state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended and must contain such argument in support of the petition as the petitioner desires to present. Oral argument is not permitted.
+> **(2) Contents.** The petition must state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended and must argue in support of the petition. Oral argument is not permitted.
 
-> **(3) Answer.** No answer to a petition for rehearing is permitted unless the court requests one. The length of an answer must comply with the page limitation in (b).
+> **(3) Answer.** Unless the court requests, no answer to a petition for rehearing is permitted. Ordinarily, rehearing will not be granted in the absence of such a request.
 
-> **(4) Action by the Court.** If a petition for rehearing is granted, the court may do any of the following:
+> **(4) Action by the Court.** If a petition for rehearing is granted the court may do any of the following:
 
 > > (A) make a final disposition of the case without reargument;
 
-> > (B) restore it to the calendar for reargument or resubmission; or
+> > (B) restore the case to the calendar for reargument or resubmission;
 
 > > (C) issue any other appropriate order.
 
-**(b) Form of Petition; Length.** The petition must comply with Rule 32. The petition must include items required under Rule 28(b) that are applicable. A petition for rehearing may not exceed 10 pages, excluding any addendum. Footnotes and endnotes must be included in the page count.
+**(b) Form of Petition; Length.** A petition for rehearing must comply in form with Rule 32. A petition for rehearing must contain all applicable items listed in Rule 28(b). A petition for rehearing or answer may not exceed 10 pages, excluding any addendum. Footnotes or endnotes must be included in the page count.
 
-**(c) Service and Filing.** The petition must be served and filed as Rule 25 and Rule 31(b) prescribe.
+**(c) Service and Filing.** Copies of a petition for rehearing must be served and filed as prescribed by Rule 25 and Rule 31(b).
 
 ### N.D.R.App.P. 34 — Oral Argument
 

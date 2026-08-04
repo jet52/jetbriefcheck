@@ -75,7 +75,8 @@ SEMANTIC_CHECKS = [
 
     # Rule 28(b)(7): "the argument"
     ("SEC-009", "Argument Section Present", "28(b)(7)",
-     [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.AMICUS], Severity.REJECT,
+     [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.AMICUS,
+      BriefType.AMICUS_REHEARING], Severity.REJECT,
      "Brief must contain an Argument section."),
 
     # Rule 28(b)(7)(B)(i): "a concise statement of the applicable standard of review"
@@ -95,12 +96,12 @@ SEMANTIC_CHECKS = [
 
     # Rule 29(a)(4)(C): "a concise statement of the identity of the amicus curiae, and its interest in the case"
     ("SEC-014", "Amicus: Identity/Interest Statement", "29(a)(4)(C)",
-     [BriefType.AMICUS], Severity.REJECT,
+     [BriefType.AMICUS, BriefType.AMICUS_REHEARING], Severity.REJECT,
      "Amicus brief must include a statement of identity and interest."),
 
     # Rule 29(a)(4)(D): disclosure of authorship and funding
     ("SEC-015", "Amicus: Disclosure Statement", "29(a)(4)(D)",
-     [BriefType.AMICUS], Severity.CORRECTION,
+     [BriefType.AMICUS, BriefType.AMICUS_REHEARING], Severity.CORRECTION,
      "Amicus brief must include a disclosure statement (authorship and funding)."),
 
     # Rule 28(e): "counsel should use the parties' actual names or the designations used in the lower court"

@@ -39,11 +39,9 @@ PAGE_LIMITS = {
     BriefType.CROSS_APPEAL: 38,
     BriefType.REPLY: 12,
     BriefType.AMICUS: 19,
+    BriefType.AMICUS_REHEARING: 10,
     BriefType.PETITION_REHEARING: 10,
 }
-
-# Word limit for amicus rehearing brief
-AMICUS_REHEARING_WORD_LIMIT = 2600
 
 # --- Cover color by brief type ---
 # Rule 32(a)(2): colors for brief covers
@@ -53,6 +51,7 @@ COVER_COLORS = {
     BriefType.REPLY: "gray",
     BriefType.CROSS_APPEAL: "gray",
     BriefType.AMICUS: "green",
+    BriefType.AMICUS_REHEARING: "green",
 }
 
 # --- Section heading patterns ---

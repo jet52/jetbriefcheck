@@ -16,7 +16,7 @@
 
 > > (C) the title of the case (see [Rule 3(d)](/legal-resources/rules/ndrappp/3) ) ;
 
-> > (D) the nature of the proceeding (e. g. , Appeal from Summary Judgment) and the name of the court, agency, or board below;
+> > (D) the nature of the proceeding (e.g., Appeal from Summary Judgment) and the name of the court, agency, or board below;
 
 > > (E) the title of the brief, identifying the party or parties for whom the brief is filed;
 

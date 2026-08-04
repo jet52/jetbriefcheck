@@ -52,7 +52,7 @@ Briefs must be concise, presented with accuracy, logically arranged, free from b
 - **(5) Length**: No more than one-half the maximum for a party's principal brief (i.e., 19 pages)
 
 ### (b) During Consideration of Rehearing
-- **(4)** Brief must not exceed 2,600 words
+- **(4)** Brief must not exceed 10 pages
 
 ## Rule 30 — References to the Record
 

@@ -23,7 +23,7 @@ These are run by `check_brief.py` — no changes needed here.
 | PG-001 | Principal brief <= 38 pages (excl. addendum) | 32(a)(8) | REJECT |
 | PG-002 | Reply brief <= 12 pages | 32(a)(8) | REJECT |
 | PG-003 | Amicus brief <= 19 pages | 29(a)(5) | REJECT |
-| PG-004 | Amicus rehearing <= 2,600 words | 29(b)(4) | REJECT |
+| PG-004 | Amicus rehearing brief <= 10 pages | 29(b)(4) | REJECT |
 | COV-001 | Cover color matches brief type | 32(a)(2) | CORRECTION |
 | COV-002 | "ORAL ARGUMENT REQUESTED" on cover | 28(h)/34(a)(1)(C) | NOTE |
 | CNT-004 | Paragraphs numbered (arabic numerals) | 32(a)(7) | CORRECTION |

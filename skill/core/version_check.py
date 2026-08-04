@@ -33,6 +33,7 @@ RULE_URLS = {
     "rule-30": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/30",
     "rule-32": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/32",
     "rule-34": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/34",
+    "rule-40": "https://www.ndcourts.gov/legal-resources/rules/ndrappp/40",
     "rule-3.4": "https://www.ndcourts.gov/legal-resources/rules/ndrct/3-4",
     "rule-11.6": "https://www.ndcourts.gov/legal-resources/rules/ndrct/11-6",
 }
@@ -42,10 +43,11 @@ BUNDLED_EFFECTIVE_DATES = {
     "rule-14": "2020-03-01",
     "rule-21": "2022-03-01",
     "rule-28": "2025-06-01",
-    "rule-29": "2022-03-01",
+    "rule-29": "2026-07-01",
     "rule-30": "2023-01-25",
     "rule-32": "2024-04-01",
     "rule-34": "2025-09-01",
+    "rule-40": "2026-07-01",
     "rule-3.4": "2025-03-01",
     "rule-11.6": "2025-03-01",
 }

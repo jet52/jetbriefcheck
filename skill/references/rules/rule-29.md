@@ -44,8 +44,8 @@
 
 > (2) When Permitted. An amicus curiae may file a brief only by leave of court.
 
-> (3) Motion for Leave to File. Rule 29(a)(3) applies to a motion for leave.
+> (3) Motion for Leave to File. Paragraph (a)(3) applies to a motion for leave.
 
-> (4) Contents, Form, and Length. Rule 29(a)(4) applies to the amicus brief. The brief must not exceed 2,600 words.
+> (4) Contents, Form, and Length. Paragraph (a)(4) applies to the amicus brief. The brief must not exceed 10 pages.
 
 > (5) Time for Filing. An amicus curiae supporting the petition for rehearing or supporting neither party must file its brief, accompanied by a motion for filing when necessary, no later than 7 days after the petition is filed. An amicus curiae opposing the petition must file its brief, accompanied by a motion for filing when necessary, no later than the date set by the court for the response.

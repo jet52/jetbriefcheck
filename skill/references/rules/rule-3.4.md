@@ -32,7 +32,7 @@
 
 > > (C) the record of a court or tribunal, if that record was not subject to the redaction requirement when originally filed;
 
-> > (D) a filing covered by Rule 3.4 (c);
+> > (D) a filing covered by Rule 3.4(c);
 
 > > (E) the name of an individual known to be a minor when the minor is a party, including:
 
@@ -66,7 +66,7 @@
 
 **(e) Non-conforming Documents.**
 
-> (1) Waiver. A person waives the protection of Rule 3.4 (b) as to the person's own information by filing it without redaction or without moving that the information be protected from public access.
+> (1) Waiver. A person waives the protection of Rule 3.4(b) as to the person's own information by filing it without redaction or without moving that the information be protected from public access.
 
 > (2) An individual may apply to the court to redact the individual’s own improperly included protected information from a filed document and the clerk of court must temporarily restrict access to the document pending order by the court.
 
