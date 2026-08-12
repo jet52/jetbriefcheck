@@ -603,18 +603,55 @@ def _check_page_numbering(metadata: BriefMetadata) -> list[CheckResult]:
     """FMT-011 and FMT-012: Page numbering."""
     results = []
 
-    # FMT-011: Pages numbered at bottom
+    # FMT-011: Pages numbered at bottom.
+    #
+    # Three outcomes, not two.  A page whose footer holds an image or an
+    # unreadable text block may well be numbered — scanned briefs carry the
+    # number in the page image — and reporting that as "unnumbered" states
+    # as fact something we did not check.  Those pages are set aside, and if
+    # they are the only ones in question the check reports that it could not
+    # determine the answer rather than failing the brief.
     unnumbered = []
+    indeterminate = []
     for p in metadata.pages:
-        if not p.has_page_number_bottom and p.text.strip():
+        if p.has_page_number_bottom or not p.text.strip():
+            continue
+        if p.page_number_indeterminate:
+            indeterminate.append(p.page_number + 1)
+        else:
             unnumbered.append(p.page_number + 1)
 
+    rule_note = "Rule 32(a)(4) requires pages to be numbered at the bottom."
+    undetermined_note = (
+        "The footer area on {pages} holds an image or text that could not be "
+        "read, so it could not be determined whether a page number is "
+        "printed there. Scanned and re-imaged briefs carry the page number "
+        "in the page image. Confirm by eye."
+    )
+
     if unnumbered:
+        details = [rule_note]
+        if indeterminate:
+            details.append(
+                undetermined_note.format(pages=_page_list(indeterminate))
+                + " Those pages are not counted as violations."
+            )
         results.append(CheckResult(
             check_id="FMT-011", name="Page Numbers at Bottom", rule="32(a)(4)",
             passed=False, severity=Severity.CORRECTION,
             message=f"Pages without bottom page numbers: {_page_list(unnumbered)}.",
-            details="Rule 32(a)(4) requires pages to be numbered at the bottom.",
+            details="\n\n".join(details),
+        ))
+    elif indeterminate:
+        results.append(CheckResult(
+            check_id="FMT-011", name="Page Numbers at Bottom", rule="32(a)(4)",
+            passed=False, severity=Severity.CORRECTION, applicable=False,
+            message=(
+                f"Could not determine whether {_page_list(indeterminate)} "
+                f"carry bottom page numbers."
+            ),
+            details=undetermined_note.format(pages=_page_list(indeterminate))
+                    + "\n\n" + rule_note,
         ))
     else:
         results.append(CheckResult(
@@ -631,7 +668,18 @@ def _check_page_numbering(metadata: BriefMetadata) -> list[CheckResult]:
             cover.page_number_text is not None and
             cover.page_number_text.strip().strip("-–—").strip() == "1"
         )
-        if not starts_with_one:
+        if not starts_with_one and cover.page_number_indeterminate:
+            # Same reasoning as FMT-011: an unreadable cover footer is not
+            # evidence that the numbering starts anywhere in particular.
+            results.append(CheckResult(
+                check_id="FMT-012", name="Numbering Starts at 1", rule="32(a)(4)",
+                passed=False, severity=Severity.NOTE, applicable=False,
+                message="Could not determine the cover page number.",
+                details="The cover's footer area holds an image or text that "
+                        "could not be read. Confirm by eye that numbering "
+                        "starts with arabic \"1\" on the cover.",
+            ))
+        elif not starts_with_one:
             results.append(CheckResult(
                 check_id="FMT-012", name="Numbering Starts at 1", rule="32(a)(4)",
                 passed=False, severity=Severity.NOTE,

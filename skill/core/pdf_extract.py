@@ -119,7 +119,9 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
     line_spacing = _estimate_line_spacing(blocks)
 
     # Page number detection at bottom
-    has_page_num, page_num_text = _detect_page_number(blocks, rect, text, page_idx)
+    has_page_num, page_num_text, page_num_unknown = _detect_page_number(
+        blocks, rect, text, page_idx
+    )
 
     return PageInfo(
         page_number=page_idx,
@@ -134,6 +136,7 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
         text=text,
         has_page_number_bottom=has_page_num,
         page_number_text=page_num_text,
+        page_number_indeterminate=page_num_unknown,
     )
 
 
@@ -153,14 +156,42 @@ _PAGE_NUM_RE = re.compile(
     r"^[-–—\[(]?\s*(\d+)\s*[-–—\])]?$"
 )
 # Labeled forms, plus bare roman numerals ("iv", "-iv-").
-# "Page 5", "Page 5 of 25", "5 of 25", "Page ii of 25".
+# "Page 5", "Page 5 of 25", "pg. 5", "5 of 25", "Page ii of 25".
 # Either numbering system is allowed here — whether arabic numbering is
 # required is FMT-012's question, not this recognizer's.
+_PAGE_LABEL = r"(?:pages?|pg\.?)\s*"
 _PAGE_OF_RE = re.compile(
-    r"^[-–—\[(]?\s*(?:page\s+)?(\d+|[ivxlcdm]+)"
+    rf"^[-–—\[(]?\s*(?:{_PAGE_LABEL})?(\d+|[ivxlcdm]+)"
     r"(?:\s+of\s+(?:\d+|[ivxlcdm]+))?\s*[-–—\])]?$",
     re.IGNORECASE,
 )
+
+# A footer that *begins* with a page-number phrase but carries more text
+# ("Page 1 of 2 Brief in Support of Motion...").  Block detection sometimes
+# merges a running footer into one block.  Such a page IS numbered, so this
+# counts for FMT-011 — but the block is not purely a page number, so it is
+# NOT excluded from the margin calculation.  The asymmetry is deliberate:
+# "is this page numbered?" and "may this block sit inside the bottom margin?"
+# are different questions.
+_PAGE_PREFIX_RE = re.compile(
+    rf"^[-–—\[(]?\s*{_PAGE_LABEL}(\d+|[ivxlcdm]+)"
+    r"(?:\s+of\s+(?:\d+|[ivxlcdm]+))?\b",
+    re.IGNORECASE,
+)
+
+# Vertical zones, as a fraction of page height.
+#
+# The margin zone marks blocks low enough to intrude on the 1" bottom margin
+# (which begins at 90.9% of an 11" page), and governs what may be excluded
+# from the measured text area.
+#
+# Detection reaches higher.  Rule 32(a)(4) requires numbering "at the bottom"
+# and does not say how far up that reaches; filers routinely place the number
+# at 87-89%, well clear of the margin but above the margin zone.  Holding
+# detection to the margin zone reported 150 pages across test-data/ as
+# unnumbered when the number was plainly there.
+_MARGIN_FOOTER_ZONE = 0.90
+_PAGE_NUMBER_ZONE = 0.85
 
 
 def _page_number_value(text: str) -> Optional[str]:
@@ -201,7 +232,7 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
             rect.height / 72.0,
         )
 
-    bottom_zone = rect.height * 0.9  # bottom 10% of page
+    bottom_zone = rect.height * _MARGIN_FOOTER_ZONE
 
     min_x = rect.width
     max_x = 0.0
@@ -287,24 +318,49 @@ def _estimate_line_spacing(blocks: list[dict]) -> Optional[float]:
 
 def _detect_page_number(
     blocks: list[dict], rect: fitz.Rect, text: str, page_idx: int
-) -> tuple[bool, Optional[str]]:
-    """Detect if there's a page number at the bottom of the page.
+) -> tuple[bool, Optional[str], bool]:
+    """Detect a page number at the bottom of the page.
 
-    Returns the bare numeral (``"5"``, ``"iv"``) rather than the raw footer,
-    so that a decorated footer such as ``"Page 5 of 25"`` compares equal to a
-    plain ``"5"`` for FMT-012.  Uses the same recognizer as the margin
-    calculation, so a footer either counts as a page number for both or for
-    neither.
+    Returns ``(found, value, indeterminate)``.
+
+    *value* is the bare numeral (``"5"``, ``"iv"``) rather than the raw
+    footer, so a decorated footer such as ``"Page 5 of 25"`` compares equal
+    to a plain ``"5"`` for FMT-012.
+
+    *indeterminate* is True when the footer zone holds a block with no
+    extractable text and no page number was found elsewhere in the zone.
+    Scanned and re-imaged briefs put the number in the page image, where it
+    cannot be read: something is there, but we cannot say what.  That is not
+    the same as an unnumbered page, and the caller must not report it as one.
     """
-    bottom_zone = rect.height * 0.9  # bottom 10% of page
+    zone = rect.height * _PAGE_NUMBER_ZONE
+    saw_unreadable = False
 
     for block in blocks:
         if block["type"] != 0:
             continue
-        bbox = block["bbox"]
-        if bbox[1] >= bottom_zone:
-            value = _page_number_value(_block_text(block))
-            if value is not None:
-                return True, value
+        if block["bbox"][1] < zone:
+            continue
 
-    return False, None
+        block_text = _block_text(block)
+        if not block_text:
+            saw_unreadable = True
+            continue
+
+        # A block that is only a page number, or a running footer that begins
+        # with one — either way the page carries a number.
+        value = _page_number_value(block_text)
+        if value is None:
+            prefix = _PAGE_PREFIX_RE.match(block_text)
+            value = prefix.group(1) if prefix else None
+        if value is not None:
+            return True, value, False
+
+    # An image in the footer zone can carry the number just as an empty text
+    # block can.
+    if not saw_unreadable:
+        saw_unreadable = any(
+            b.get("type") == 1 and b["bbox"][3] >= zone for b in blocks
+        )
+
+    return False, None, saw_unreadable

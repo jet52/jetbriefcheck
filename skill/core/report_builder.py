@@ -109,7 +109,7 @@ def build_html_report(report: ComplianceReport, version_stamp: str = "", model: 
 
   {f'''<section class="results">
     <details>
-      <summary><h2 style="display:inline;">Not Applicable ({len(report.inapplicable_checks)})</h2></summary>
+      <summary><h2 style="display:inline;">Not Applicable / Not Determined ({len(report.inapplicable_checks)})</h2></summary>
       {na_html}
     </details>
   </section>''' if report.inapplicable_checks else ''}

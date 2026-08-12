@@ -154,9 +154,13 @@ Each failed check shows:
 
     A footer carrying anything beyond the number (a case caption, a docket number) is content and still counts against the margin, which is the intended behavior. The remaining sensitivity is the zone itself: a page number sitting just above the bottom 10% line is measured as body text.
 
-  - **Page numbering (FMT-011, FMT-012)** — these share the footer recognizer above, so a footer counts as a page number for the margin and the numbering checks alike. Two residual causes of FMT-011 failures are worth knowing:
-    - **Page numbers outside the bottom 10% zone** are not seen at all, and the brief reads as unnumbered.
-    - **Scanned briefs** whose page numbers are image, not text, cannot be detected. FMT-011 will report every page as unnumbered.
+  - **Page numbering (FMT-011, FMT-012)** — these share the footer recognizer above, with two deliberate differences from the margin check.
+
+    *Detection reaches higher up the page.* Rule 32(a)(4) requires numbering "at the bottom" without saying how far up that reaches, and filers routinely set the number at 87–89% of page height — clear of the 1" margin but above the bottom-10% band the margin check uses. Detection covers the bottom 15%; margin exclusion still covers only the bottom 10%, so a number sitting inside the text area is still ordinary content for measurement. Aligning the two zones had reported 150 pages in the sample as unnumbered when the number was plainly printed.
+
+    *A running footer counts as numbering.* Block detection sometimes merges the number into a longer footer (`Page 1 of 2 Brief in Support of Motion…`). That page is numbered, so FMT-011 accepts it — but the block is not purely a page number, so it still counts against the bottom margin. A bare leading numeral is not enough; the `Page`/`pg.` label is required, so ordinary prose beginning with a number is not mistaken for a footer.
+
+    **Undetermined is a third outcome.** When the footer area holds an image or a text block with no extractable characters — the normal case for scanned and re-imaged briefs, which carry the number in the page image — the checker reports that it *could not determine* whether the page is numbered, rather than reporting it as unnumbered. These land in the "Not Applicable / Not Determined" section and cannot influence the recommendation. Confirm those by eye.
 
     FMT-012 (numbering starts at arabic "1" on the cover) is stricter than FMT-011 by design: a brief numbered `Page i of 25` passes FMT-011 — the pages *are* numbered — while FMT-012 correctly flags that the numbering does not start with arabic 1.
 

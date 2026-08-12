@@ -63,6 +63,10 @@ class PageInfo:
     text: str = ""
     has_page_number_bottom: bool = False
     page_number_text: Optional[str] = None  # the printed page number if found
+    # True when the footer zone holds something unreadable (an image, or a
+    # text block with no extractable characters), so whether the page is
+    # numbered cannot be determined — distinct from known-unnumbered.
+    page_number_indeterminate: bool = False
 
 
 @dataclass
