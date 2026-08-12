@@ -83,6 +83,19 @@ Brief must include a certificate that the document complies with the page limita
 ### (a)(1) Oral argument generally scheduled unless:
 - (C) no request for oral argument made per Rule 28(h)
 
+## Rule 40 — Petition for Rehearing
+
+### (a)(1) Time
+May be filed within 14 days after entry of judgment, unless shortened or enlarged by order.
+
+### (a)(2) Contents
+Must state **with particularity** each point of law or fact the petitioner believes the court overlooked or misapprehended, and must argue in support of the petition. Oral argument is not permitted.
+
+### (b) Form; Length
+- Must comply in form with Rule 32.
+- Must contain all applicable items listed in Rule 28(b).
+- A petition **or answer** may not exceed **10 pages, excluding any addendum**. Footnotes and endnotes count toward the page limit.
+
 ## N.D.R.Ct. 3.4 — Privacy Protection for Filings
 
 ### (b)(1) Redaction Requirements

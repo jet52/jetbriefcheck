@@ -129,6 +129,11 @@ SEMANTIC_CHECKS = [
      [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.CROSS_APPEAL], Severity.NOTE,
      "Record references should include information identifying the item cited, e.g. 'Statement of John Doe.'"),
 
+    # N.D.R.Ct. 3.4(b)(1)(C) / Rule 14(a)(5): minors identified by initials
+    ("PRV-001", "Privacy: Minor Names Redacted", "N.D.R.Ct. 3.4(b)(1)(C)",
+     None, Severity.CORRECTION,
+     "Individuals known to be minors must be identified by initials only."),
+
     # Rule 14(a)(1): mental health respondent identity protection
     ("PRV-002", "Identity Protection: Mental Health Respondent", "14(a)(1)",
      None, Severity.CORRECTION,
@@ -339,6 +344,16 @@ Evaluation guidance:
   enough context to identify what is being cited, either in the text surrounding the citation
   or in the citation itself. Bare citations like (R12:5) with no surrounding context about
   what the item is should be flagged.
+- PRV-001: N.D.R.Ct. 3.4(b)(1)(C) requires that "the name of an individual known to be a
+  minor" be redacted to the minor's initials; Rule 14(a)(5) imposes the same obligation.
+  Check whether any minor's full first or last name appears in the brief text. Minors should
+  be identified by initials throughout (e.g. "H.R.", with or without periods). The most
+  common failure is inconsistency: initials in most places, with the actual name slipping
+  into quoted testimony or narrative. Do not flag the cover-page party caption, where a
+  parent's name naturally appears. Rule 3.4(b)(3)(E) exempts minors who are parties in
+  certain case types (traffic, name change, conservatorship, protection orders); in a
+  standard custody or family-law appeal the children are not parties and the exemption does
+  not apply, so initials are required. If no minor is involved in the case, pass.
 - PRV-002: Rule 14(a)(1) requires that the respondent in a mental health proceeding be
   referred to by initials only. First determine if this is a mental health case (look for
   indicators like "mental health commitment", "treatment order", N.D.C.C. ch. 25-03.1, etc.).

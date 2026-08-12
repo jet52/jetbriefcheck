@@ -24,6 +24,7 @@ These are run by `check_brief.py` — no changes needed here.
 | PG-002 | Reply brief <= 12 pages | 32(a)(8) | REJECT |
 | PG-003 | Amicus brief <= 19 pages | 29(a)(5) | REJECT |
 | PG-004 | Amicus rehearing brief <= 10 pages | 29(b)(4) | REJECT |
+| PG-005 | Petition for rehearing <= 10 pages (excl. addendum) | 40(b) | REJECT |
 | COV-001 | Cover color matches brief type | 32(a)(2) | CORRECTION |
 | COV-002 | "ORAL ARGUMENT REQUESTED" on cover | 28(h)/34(a)(1)(C) | NOTE |
 | CNT-004 | Paragraphs numbered (arabic numerals) | 32(a)(7) | CORRECTION |
@@ -257,6 +258,27 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Fail if**: Writ petition with exhibit citations not using (E#:#) format.
 **Note**: This is advisory — the format is recommended, not strictly required.
 **Severity**: NOTE
+
+#### RHR-001 — Rehearing: Points Overlooked or Misapprehended
+**Rule**: 40(a)(2) — "state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended"
+**Look for**: Specific identification of points of law or fact the petitioner claims the court overlooked or misunderstood. The petition should not merely reargue the case.
+**Pass if**: Not a petition for rehearing, OR the petition identifies specific points with particularity.
+**Fail if**: Petition for rehearing that fails to identify specific points the court allegedly overlooked or misapprehended, or merely reargues the merits without identifying particular errors.
+**Severity**: REJECT
+
+#### RHR-002 — Rehearing: Applicable Rule 28(b) Items
+**Rule**: 40(b) — "must include items required under Rule 28(b) that are applicable"
+**Look for**: Whether the petition includes applicable Rule 28(b) items, particularly a table of contents (28(b)(1)) and table of authorities (28(b)(2)). For short petitions (under ~5 pages), the absence of a TOC/TOA may be reasonable.
+**Pass if**: Not a petition for rehearing, OR the petition includes applicable Rule 28(b) items (or is short enough that their absence is reasonable).
+**Fail if**: Petition for rehearing of substantial length that omits a TOC or TOA.
+**Severity**: CORRECTION
+
+#### RHR-003 — Rehearing: Supporting Argument
+**Rule**: 40(a)(2) — "must argue in support of the petition"
+**Look for**: Substantive argument supporting the claim that the court overlooked or misapprehended specific points.
+**Pass if**: Not a petition for rehearing, OR the petition contains a substantive argument section.
+**Fail if**: Petition for rehearing with no meaningful argument supporting the identified points.
+**Severity**: REJECT
 
 #### CIT-002 — ND Case Citations: Pre/Post-1997 Compliance
 **Rule**: N.D.R.Ct. 11.6 — medium-neutral citations required for post-1997 ND opinions

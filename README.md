@@ -207,7 +207,7 @@ The checker evaluates compliance against these North Dakota rules:
 
 ```bash
 # Set up the virtual environment
-uv venv && uv pip install -r requirements.txt
+uv venv && uv pip install -r skill/requirements.txt
 source .venv/bin/activate
 
 # Deploy the Claude Code skill (symlinks this repo to ~/.claude/skills/)
