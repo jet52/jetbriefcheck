@@ -17,6 +17,7 @@ from core.constants import (
     MAX_CHARS_PER_INCH,
     MIN_BOTTOM_MARGIN,
     MIN_DOUBLE_SPACE_PTS,
+    MIN_SPACING_COVERAGE_PCT,
     MIN_FONT_SIZE_PT,
     MIN_LEFT_MARGIN,
     MIN_RIGHT_MARGIN,
@@ -556,34 +557,73 @@ def _check_font_style(metadata: BriefMetadata) -> str:
 
 
 def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
-    """FMT-009: Body text is double-spaced."""
-    # Collect line spacings from body pages (skip cover)
-    spacings = []
-    for p in metadata.pages[1:]:
-        if p.line_spacing is not None:
-            spacings.append(p.line_spacing)
+    """FMT-009: Body text is double-spaced.
+
+    The median is only as good as the sample behind it.  Spacing cannot be
+    measured on every page — a page of block quotations, a signature page, a
+    page whose text extracts oddly — and when few pages yield a value the
+    median can pass a single-spaced brief on the strength of two readings.
+    Below MIN_SPACING_COVERAGE_PCT the check reports that it could not
+    determine the answer rather than concluding from a thin sample.
+    """
+    # Body pages carrying text (skip the cover); a page with no text cannot
+    # be measured and should not count against coverage.
+    body_pages = [p for p in metadata.pages[1:] if p.text.strip()]
+    spacings = [p.line_spacing for p in body_pages if p.line_spacing is not None]
+
+    if not body_pages:
+        return CheckResult(
+            check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
+            passed=True, severity=Severity.CORRECTION, applicable=False,
+            message="No body pages to measure.",
+            details="The brief has no pages after the cover carrying text.",
+        )
+
+    coverage = len(spacings) / len(body_pages) * 100
+    coverage_note = (
+        f"Line spacing was measurable on {len(spacings)} of "
+        f"{len(body_pages)} body pages ({coverage:.0f}%)."
+    )
 
     if not spacings:
         return CheckResult(
             check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
-            passed=True, severity=Severity.CORRECTION,
-            message="Unable to measure line spacing; assumed compliant.",
+            passed=False, severity=Severity.CORRECTION, applicable=False,
+            message="Could not determine line spacing; no page yielded a measurement.",
+            details=f"{coverage_note} Spacing was not verified — check by eye "
+                    f"rather than treating this as compliant.",
         )
 
     median = statistics.median(spacings)
+
+    if coverage < MIN_SPACING_COVERAGE_PCT:
+        return CheckResult(
+            check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
+            passed=False, severity=Severity.CORRECTION, applicable=False,
+            message=(
+                f"Could not determine line spacing; measured on only "
+                f"{len(spacings)} of {len(body_pages)} body pages."
+            ),
+            details=f"{coverage_note} The median of those pages is "
+                    f"{median:.1f}pt, but too few pages were measurable to "
+                    f"rely on it — a single-spaced brief can pass on a small "
+                    f"sample. Check by eye.",
+        )
+
     if median < MIN_DOUBLE_SPACE_PTS:
         return CheckResult(
             check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
             passed=False, severity=Severity.CORRECTION,
             message=f"Body text appears single-spaced (median spacing: {median:.1f}pt).",
             details=f"Double spacing requires ~24pt between baselines for 12pt text. "
-                    f"Median detected: {median:.1f}pt.",
+                    f"Median detected: {median:.1f}pt. {coverage_note}",
         )
 
     return CheckResult(
         check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
         passed=True, severity=Severity.CORRECTION,
         message=f"Body text appears double-spaced (median: {median:.1f}pt).",
+        details=coverage_note,
     )
 
 

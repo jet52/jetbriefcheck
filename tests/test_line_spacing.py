@@ -565,18 +565,32 @@ class TestCheckDoubleSpacing:
         result = _check_double_spacing(meta)
         assert result.passed is True
 
-    def test_pass_no_measurable_spacing_assumed_compliant(self):
-        """All body pages have None spacing → assumed compliant."""
+    def test_no_measurable_spacing_is_undetermined_not_compliant(self):
+        """All body pages unmeasurable → undetermined, never "assumed compliant".
+
+        Treating an unmeasured brief as compliant states as fact something
+        never checked, and it is the direction that lets a single-spaced
+        brief through.
+        """
         meta = _make_metadata([None, None, None, None])
         result = _check_double_spacing(meta)
-        assert result.passed is True
-        assert "assumed compliant" in result.message.lower()
+        assert result.applicable is False, "must not count as a real finding"
+        assert result.passed is False, "must not count as compliant either"
+        assert "could not determine" in result.message.lower()
+        assert "assumed compliant" not in (result.message + (result.details or "")).lower()
+
+    def test_undetermined_cannot_affect_the_recommendation(self):
+        """applicable=False keeps it out of failed_checks."""
+        meta = _make_metadata([None, None, None])
+        result = _check_double_spacing(meta)
+        assert result.failed is False
 
     def test_pass_single_page_brief(self):
-        """Only cover page (no body pages) → assumed compliant."""
+        """Only a cover page — there is no body text to measure."""
         meta = _make_metadata([None])
         result = _check_double_spacing(meta)
-        assert result.passed is True
+        assert result.applicable is False
+        assert "no body pages" in result.message.lower()
 
     # -- Failing cases ---------------------------------------------------
 
@@ -610,10 +624,16 @@ class TestCheckDoubleSpacing:
         assert result.passed is True
 
     def test_cover_page_only_single_does_not_fail(self):
-        """Single-spaced cover with no body spacing data → assumed compliant."""
+        """A single-spaced cover is not evidence about the body.
+
+        With no body measurement the answer is undetermined — the cover's
+        spacing must not stand in for it, in either direction.
+        """
         meta = _make_metadata([14.4, None, None])
         result = _check_double_spacing(meta)
-        assert result.passed is True
+        assert result.failed is False
+        assert result.applicable is False
+        assert "14.4" not in result.message
 
     # -- Mixed spacing across body pages ---------------------------------
 
@@ -661,3 +681,83 @@ class TestCheckDoubleSpacing:
         meta = _make_metadata([None, 14.4])
         result = _check_double_spacing(meta)
         assert result.severity == Severity.CORRECTION
+
+
+# ===================================================================
+# FMT-009 measurement coverage
+# ===================================================================
+
+class TestDoubleSpacingCoverage:
+    """The median is only as good as the sample behind it.
+
+    Coverage in test-data/ is bimodal: 22 of 23 briefs measure 78-100% of
+    their body pages, and the one known false negative measures 29% — it
+    squeaked past the 20pt threshold at 20.5pt on 2 of 7 pages, while its
+    corrected refiling measured 27.6pt on 13 of 13.  Below the floor the
+    check declines to conclude in either direction.
+    """
+
+    def test_thin_coverage_is_undetermined_even_when_median_passes(self):
+        """The regression: 2 of 7 pages at 20.5pt must not read as compliant."""
+        meta = _make_metadata([None, 20.5, 20.5, None, None, None, None, None])
+        result = _check_double_spacing(meta)
+        assert result.applicable is False
+        assert "could not determine" in result.message.lower()
+        assert "2 of 7" in result.message
+
+    def test_thin_coverage_is_undetermined_even_when_median_fails(self):
+        """Thin data is unreliable in both directions, not just the lenient one."""
+        meta = _make_metadata([None, 14.0, 14.0, None, None, None, None, None])
+        result = _check_double_spacing(meta)
+        assert result.applicable is False
+        assert result.severity == Severity.CORRECTION
+
+    def test_thin_coverage_still_reports_what_it_saw(self):
+        """Declining to conclude is not declining to inform."""
+        meta = _make_metadata([None, 20.5, 20.5, None, None, None, None, None])
+        result = _check_double_spacing(meta)
+        assert "20.5" in result.details
+        assert "check by eye" in result.details.lower()
+
+    def test_coverage_at_the_floor_concludes(self):
+        """Exactly at MIN_SPACING_COVERAGE_PCT is enough to state a result."""
+        # 3 of 6 body pages = 50.0%
+        meta = _make_metadata([None, 24.0, 24.0, 24.0, None, None, None])
+        result = _check_double_spacing(meta)
+        assert result.applicable is True
+        assert result.passed is True
+
+    def test_coverage_just_below_the_floor_declines(self):
+        # 2 of 5 body pages = 40%
+        meta = _make_metadata([None, 24.0, 24.0, None, None, None])
+        result = _check_double_spacing(meta)
+        assert result.applicable is False
+
+    def test_blank_pages_do_not_count_against_coverage(self):
+        """A page with no text cannot be measured and is not a gap."""
+        pages = [
+            _make_page(0, None),
+            _make_page(1, 24.0),
+            _make_page(2, 24.0),
+            PageInfo(page_number=3, width_inches=8.5, height_inches=11.0,
+                     left_margin_inches=1.5, right_margin_inches=1.0,
+                     top_margin_inches=1.0, bottom_margin_inches=1.0,
+                     line_spacing=None, text="   "),   # blank page
+        ]
+        meta = BriefMetadata(pages=pages, total_pages=len(pages))
+        result = _check_double_spacing(meta)
+        assert result.applicable is True, "blank page must not drag coverage down"
+        assert result.passed is True
+
+    def test_full_coverage_reports_it(self):
+        meta = _make_metadata([None, 24.0, 24.0, 24.0])
+        result = _check_double_spacing(meta)
+        assert result.passed is True
+        assert "3 of 3" in result.details
+
+    def test_failure_reports_coverage_too(self):
+        meta = _make_metadata([None, 14.4, 14.4, 14.4])
+        result = _check_double_spacing(meta)
+        assert result.passed is False
+        assert result.applicable is True
+        assert "3 of 3" in result.details

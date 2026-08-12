@@ -43,6 +43,19 @@ MIN_DOUBLE_SPACE_PTS = 20.0
 # side.
 LEADING_TO_FONT_FULL_SIZE_RATIO = 2.6
 
+# Share of body pages whose line spacing must be measurable before FMT-009
+# will state a conclusion.  Below this the median rests on too small a
+# sample to distinguish a single-spaced brief from a sampling artifact, and
+# the check reports that it could not determine the answer.
+#
+# Coverage in test-data/ is bimodal: 22 of 23 briefs measure 78-100% of
+# their body pages (17 of them 100%), and the one known false negative
+# measures 29% — a brief that squeaked past the 20pt threshold at 20.5pt on
+# 2 of 7 pages, while its corrected refiling measured 27.6pt on 13 of 13.
+# The gap between 29% and 78% is empty, so the floor sits in the middle of
+# it rather than on either cluster.
+MIN_SPACING_COVERAGE_PCT = 50.0
+
 # --- Page limits ---
 PAGE_LIMITS = {
     BriefType.APPELLANT: 38,
