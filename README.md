@@ -140,10 +140,25 @@ Each failed check shows:
 
 - **Specify the brief type** if you know it. Auto-detection works for most appellant briefs but sometimes misidentifies appellee and reply briefs. Telling Claude the type up front avoids this.
 
-- **Known false positives to watch for:**
-  - **Font size (FMT-006)**: Page numbers, footnote markers, and superscripts are often smaller than 12pt. The report now categorizes these separately (body text vs. header/footer vs. superscript) so you can see whether the issue is real body text or just incidental small characters. If the only noncompliant characters on a page are in the header/footer or superscript categories, the severity is downgraded to a note rather than a rejection.
-  - **Line spacing (FMT-009)**: The spacing detector can misread certain PDF encodings. If the brief was prepared in a standard word processor with double spacing selected, a spacing failure is likely a false positive.
-  - **Bottom margin (FMT-005)**: Page numbers at the bottom of the page are measured as content, which makes the bottom margin appear smaller than it really is.
+- **Known measurement pitfalls to watch for.** These are calibrated against the sample of 23 briefs in `test-data/`; the counts below come from that sample, not from production volume.
+
+  - **Font size (FMT-006)** — two unrelated causes, worth telling apart before you act on the finding.
+
+    *Scaled PDFs.* Check the **predominant font size** reported in the details. If it is below 12pt document-wide (9.7pt and 11.0pt both appear in the sample), the PDF was downscaled somewhere in conversion or "compression," shrinking every character uniformly. The source document was most likely compliant. This is not strictly a false positive — the filed PDF is what the rule measures — but the cure is refiling at 100% scale, not restyling the brief, and the correction letter should say so. This is now the dominant driver of FMT-006 failures: 5 of the 8 in the sample.
+
+    *Localized small type.* Page numbers, footnote markers, superscripts, and small caps are classified separately from body text, and when the only noncompliant characters are incidental the severity drops to a note rather than a rejection. So a REJECT on a brief whose predominant size *is* 12pt, resting on a small body-character count, is the case that still deserves an eyeball — the per-page breakdown shows exactly how many characters are involved.
+
+  - **Line spacing (FMT-009)** — the old "probably a false positive" advice is retired. Before v1.6.0 the detector only measured gaps *within* a text block, and double-spaced lines land in one block each, so it measured almost nothing on exactly the briefs it was meant to check. It now also measures baseline-to-baseline between consecutive single-line blocks. In the sample only 2 of 23 briefs fail, and both look genuine — in one, the filer's own corrected refiling moves from 16.1pt to 27.5pt and passes. **Treat a spacing failure as probably real.** The remaining soft spot is the opposite error: when only a few pages yield a measurement, the median rests on a thin sample and a single-spaced brief can slip through.
+
+  - **Bottom margin (FMT-005)** — page-number footers in the bottom 10% of the page are excluded from the margin, in every form filers actually use: bare numerals (`5`, `-5-`, `[5]`), roman numerals, and the labeled styles (`Page 5`, `Page 5 of 25`, `5 of 25`, `Page ii of 25`). Blocks with no extractable text — the empty text objects that scanned and re-imaged PDFs leave behind — are excluded everywhere on the page, since they occupy space but show no ink. Recognizing the labeled footers cleared 7 of the 9 FMT-005 failures in the sample with no new failures.
+
+    A footer carrying anything beyond the number (a case caption, a docket number) is content and still counts against the margin, which is the intended behavior. The remaining sensitivity is the zone itself: a page number sitting just above the bottom 10% line is measured as body text.
+
+  - **Page numbering (FMT-011, FMT-012)** — these share the footer recognizer above, so a footer counts as a page number for the margin and the numbering checks alike. Two residual causes of FMT-011 failures are worth knowing:
+    - **Page numbers outside the bottom 10% zone** are not seen at all, and the brief reads as unnumbered.
+    - **Scanned briefs** whose page numbers are image, not text, cannot be detected. FMT-011 will report every page as unnumbered.
+
+    FMT-012 (numbering starts at arabic "1" on the cover) is stricter than FMT-011 by design: a brief numbered `Page i of 25` passes FMT-011 — the pages *are* numbered — while FMT-012 correctly flags that the numbering does not start with arabic 1.
 
 - **You can ask follow-up questions.** After the report is generated, you can ask Claude things like:
   - "Which pages have the font size issue?"

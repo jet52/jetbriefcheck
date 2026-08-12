@@ -1,6 +1,6 @@
 {
-  "version": "2.2.0",
-  "build_date": "2026-08-04",
+  "version": "2.3.0",
+  "build_date": "2026-08-12",
   "rules_verified": "2026-08-04",
   "rules_freshness_days": 90,
   "check_url": "https://raw.githubusercontent.com/jet52/jetbriefcheck/main/version.json",

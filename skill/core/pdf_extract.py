@@ -137,13 +137,60 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
     )
 
 
+def _block_text(block: dict) -> str:
+    """Concatenate all span text in a block, stripped."""
+    return "".join(
+        span["text"]
+        for line in block.get("lines", [])
+        for span in line.get("spans", [])
+    ).strip()
+
+
+# Page-number footer forms.  Anchored and applied only within the bottom zone,
+# so they must match the whole footer — a footer carrying anything else (a case
+# caption, a docket number) is content and does count against the margin.
+_PAGE_NUM_RE = re.compile(
+    r"^[-–—\[(]?\s*(\d+)\s*[-–—\])]?$"
+)
+# Labeled forms, plus bare roman numerals ("iv", "-iv-").
+# "Page 5", "Page 5 of 25", "5 of 25", "Page ii of 25".
+# Either numbering system is allowed here — whether arabic numbering is
+# required is FMT-012's question, not this recognizer's.
+_PAGE_OF_RE = re.compile(
+    r"^[-–—\[(]?\s*(?:page\s+)?(\d+|[ivxlcdm]+)"
+    r"(?:\s+of\s+(?:\d+|[ivxlcdm]+))?\s*[-–—\])]?$",
+    re.IGNORECASE,
+)
+
+
+def _page_number_value(text: str) -> Optional[str]:
+    """Return the printed page number if *text* is a page-number footer.
+
+    Recognizes bare numerals ("5", "-5-", "[5]"), roman numerals ("iv"),
+    and the labeled forms ("Page 5", "Page 5 of 25", "5 of 25").  Returns
+    the bare numeral so callers can compare it directly; returns None when
+    the text is not a page-number footer.
+    """
+    if not text:
+        return None
+    for pattern in (_PAGE_NUM_RE, _PAGE_OF_RE):
+        match = pattern.match(text)
+        if match:
+            return match.group(1)
+    return None
+
+
 def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float, float, float]:
     """Compute margins in inches from text block positions.
 
-    Page-number blocks in the bottom zone are excluded from the bottom margin
-    calculation.  Rule 32(a)(4) requires 1" margins but is silent on page
-    numbers; we allow page numbers (and only page numbers) to appear within
-    the bottom margin zone.
+    Two classes of block are excluded from the measured text area:
+
+    * **Blocks with no extractable text.**  Scanned and re-imaged PDFs carry
+      empty text objects that occupy space but show nothing.  They have no
+      visible ink, so they cannot define a margin.
+    * **Page-number blocks in the bottom zone.**  Rule 32(a)(4) requires 1"
+      margins but is silent on page numbers; we allow page numbers (and only
+      page numbers) to appear within the bottom margin zone.
     """
     if not blocks:
         # No content — return full page as margin
@@ -155,8 +202,6 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
         )
 
     bottom_zone = rect.height * 0.9  # bottom 10% of page
-    _PAGE_NUM_RE = re.compile(r"^[-–—]?\s*\d+\s*[-–—]?$")
-    _ROMAN_RE = re.compile(r"^[-–—]?\s*[ivxlcdm]+\s*[-–—]?$", re.IGNORECASE)
 
     min_x = rect.width
     max_x = 0.0
@@ -167,16 +212,15 @@ def _compute_margins(blocks: list[dict], rect: fitz.Rect) -> tuple[float, float,
         if block["type"] != 0:  # only text blocks
             continue
         bbox = block["bbox"]
+        text = _block_text(block)
+
+        # Invisible/empty text blocks define no margin anywhere on the page
+        if not text:
+            continue
 
         # Skip page-number blocks in the bottom zone for margin calculation
-        if bbox[1] >= bottom_zone:
-            block_text = ""
-            for line in block.get("lines", []):
-                for span in line.get("spans", []):
-                    block_text += span["text"]
-            block_text = block_text.strip()
-            if _PAGE_NUM_RE.match(block_text) or _ROMAN_RE.match(block_text):
-                continue
+        if bbox[1] >= bottom_zone and _page_number_value(text) is not None:
+            continue
 
         min_x = min(min_x, bbox[0])
         max_x = max(max_x, bbox[2])
@@ -244,7 +288,14 @@ def _estimate_line_spacing(blocks: list[dict]) -> Optional[float]:
 def _detect_page_number(
     blocks: list[dict], rect: fitz.Rect, text: str, page_idx: int
 ) -> tuple[bool, Optional[str]]:
-    """Detect if there's a page number at the bottom of the page."""
+    """Detect if there's a page number at the bottom of the page.
+
+    Returns the bare numeral (``"5"``, ``"iv"``) rather than the raw footer,
+    so that a decorated footer such as ``"Page 5 of 25"`` compares equal to a
+    plain ``"5"`` for FMT-012.  Uses the same recognizer as the margin
+    calculation, so a footer either counts as a page number for both or for
+    neither.
+    """
     bottom_zone = rect.height * 0.9  # bottom 10% of page
 
     for block in blocks:
@@ -252,16 +303,8 @@ def _detect_page_number(
             continue
         bbox = block["bbox"]
         if bbox[1] >= bottom_zone:
-            block_text = ""
-            for line in block.get("lines", []):
-                for span in line.get("spans", []):
-                    block_text += span["text"]
-            block_text = block_text.strip()
-            # Check if it looks like a page number (digits, possibly with dashes)
-            if re.match(r"^[-–—]?\s*\d+\s*[-–—]?$", block_text):
-                return True, block_text.strip()
-            # Also match roman numerals
-            if re.match(r"^[-–—]?\s*[ivxlcdm]+\s*[-–—]?$", block_text, re.IGNORECASE):
-                return True, block_text.strip()
+            value = _page_number_value(_block_text(block))
+            if value is not None:
+                return True, value
 
     return False, None

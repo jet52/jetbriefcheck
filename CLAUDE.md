@@ -44,6 +44,9 @@ pytest tests/
 
 - Python 3.9+, PyMuPDF >= 1.24.0
 - Optional Anthropic API key for AI-enhanced analysis
-- Known false positives: font size (headers/footers/superscripts), line spacing (encoding issues), bottom margins (page numbers)
-- Test data in `test-data/` (~76 sample PDFs)
+- Measurement pitfalls (see README "Known measurement pitfalls" for detail):
+  - **FMT-006 font size** — dominant cause is *scaled PDFs* (predominant font size below 12pt document-wide), not incidental small characters; headers/footers/superscripts/small caps are categorized and downgraded already
+  - **FMT-009 line spacing** — measured across split blocks since v1.6.0; failures are usually real. Risk is the opposite: thin page coverage can hide a single-spaced brief
+  - **FMT-005 / FMT-011 / FMT-012** — share one page-number footer recognizer (`_page_number_value` in `pdf_extract.py`); residual gap is page numbers outside the bottom 10% zone, and scanned briefs whose numbers are images
+- Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Skill deploys to `~/.claude/skills/jetbriefcheck/`
