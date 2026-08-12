@@ -478,13 +478,19 @@ def _parse_semantic_response(
             details=item.get("details"),
         ))
 
-    # Add fallbacks for any checks Claude didn't address
+    # Any check the model did not address was not evaluated.  Reporting it as
+    # passed would put it in the report's "Passed Checks" list and let it
+    # support an ACCEPT — asserting compliance that was never assessed.  Mark
+    # it undetermined instead, so it lands in "Not Applicable / Not
+    # Determined" and cannot move the recommendation.
     for cid, name, rule, severity, desc in checks:
         if cid not in seen_ids:
             results.append(CheckResult(
                 check_id=cid, name=name, rule=rule,
-                passed=True, severity=severity,
-                message="Not evaluated by AI analysis; manual review recommended.",
+                passed=False, severity=severity, applicable=False,
+                message="Not evaluated by AI analysis; requires manual review.",
+                details="This check was sent for analysis but no result came "
+                        "back for it. It has not been verified either way.",
             ))
 
     return results
@@ -493,12 +499,22 @@ def _parse_semantic_response(
 def _fallback_results(
     checks: list[tuple], error_msg: str
 ) -> list[CheckResult]:
-    """Return inconclusive results when API parsing fails."""
+    """Return undetermined results when the API call or its parsing fails.
+
+    This path fires for every semantic check at once, so marking them passed
+    would produce a report whose "Passed Checks" list is entirely fictional
+    and whose recommendation could be ACCEPT on the strength of an analysis
+    that never ran.  They are undetermined (``applicable=False``): excluded
+    from both the passed and the failed tallies, and unable to move the
+    recommendation.
+    """
     return [
         CheckResult(
             check_id=cid, name=name, rule=rule,
-            passed=True, severity=severity,
-            message=f"AI analysis unavailable: {error_msg}",
+            passed=False, severity=severity, applicable=False,
+            message=f"Not determined — AI analysis unavailable: {error_msg}",
+            details="No semantic check was evaluated. Nothing in this "
+                    "section has been verified; review the brief manually.",
         )
         for cid, name, rule, severity, _ in checks
     ]

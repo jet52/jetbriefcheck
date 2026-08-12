@@ -44,7 +44,31 @@ def compute_recommendation(
                 + "; ".join(f"{r.check_id} ({r.name})" for r in reject_checks)
             )
 
+    reasoning = _append_undetermined_caveat(results, reasoning)
     return final, reasoning
+
+
+def _append_undetermined_caveat(results: list[CheckResult], reasoning: str) -> str:
+    """Disclose checks that were never determined.
+
+    The recommendation is computed from findings, and a check that could not
+    be evaluated produces no finding — so it silently reads as though nothing
+    were wrong with it.  Naming those checks keeps "not checked" from passing
+    for "checked and clean," which matters most when the whole semantic pass
+    fails at once and the recommendation would otherwise be an unqualified
+    ACCEPT.
+    """
+    undetermined = [r for r in results if not r.applicable and not r.passed]
+    if not undetermined:
+        return reasoning
+
+    ids = ", ".join(sorted(r.check_id for r in undetermined))
+    caveat = (
+        f"{len(undetermined)} check(s) could not be determined and did not "
+        f"factor into this recommendation: {ids}. Those requirements are "
+        f"unverified, not satisfied."
+    )
+    return f"{reasoning} {caveat}".strip() if reasoning else caveat
 
 
 def _hard_rule_pass(results: list[CheckResult]) -> Recommendation:
