@@ -48,10 +48,18 @@ pytest tests/
   - **FMT-006 font size** — splits document-wide undersize (predominant size itself below 12pt) from scattered spans; leading/font ratio rules *out* page scaling but cannot prove it (see `_explain_document_wide_undersize`). Headers/footers/superscripts/small caps are categorized and downgraded already
   - **FMT-009 line spacing** — measured across split blocks since v1.6.0; failures are usually real. Reports measurement coverage, and returns **undetermined** below `MIN_SPACING_COVERAGE_PCT` (50%) instead of the old "assumed compliant"
   - **FMT-005 / FMT-011 / FMT-012** — share one page-number footer recognizer (`_page_number_value` in `pdf_extract.py`), but two zones: `_MARGIN_FOOTER_ZONE` (0.90) for what may sit inside the bottom margin, `_PAGE_NUMBER_ZONE` (0.85) for what counts as numbering. FMT-011/012 report **undetermined** (`applicable=False`, so it cannot drive the recommendation) when the footer holds an image or unreadable text — never "unnumbered"
-- Semantic checks that the API never evaluated (unparseable response, or a check the model
-  omitted) are reported **undetermined** (`applicable=False`), never passed; the
-  recommendation reasoning names them. Never reintroduce a `passed=True` fallback for
-  unevaluated checks — the report's "Passed Checks" list must not contain fiction.
+- **Two execution paths for semantic checks — don't conflate them.**
+  - *Skill path* (how it runs under a Claude subscription): SKILL.md has Claude evaluate the
+    checks directly and write `<stem>-semantic.json`; `build_report.py` merges it. **No API
+    key, and `anthropic` is not installed** — `skill/requirements.txt` is PyMuPDF only, so
+    nothing on this path may import `checks_semantic`. Shared check definitions live in
+    `core/semantic_definitions.py` (pure data) for exactly this reason.
+  - *API path* (Flask app, CLI with a key): `core/checks_semantic.run_semantic_checks`.
+- On both paths, a check that was not evaluated is reported **undetermined**
+  (`applicable=False`), never passed — omitted from the semantic JSON on the skill path,
+  or unparseable/absent from the API response on the other. Never reintroduce a
+  `passed=True` fallback for unevaluated checks; the "Passed Checks" list must not contain
+  fiction.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content

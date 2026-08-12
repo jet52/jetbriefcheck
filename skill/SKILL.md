@@ -112,6 +112,8 @@ You (Claude) perform the semantic analysis directly — no API call needed.
 
 Each semantic check must appear in the results — either as an evaluated result (applicable: true) or as not-applicable (passed: true, applicable: false).
 
+`build_report.py` reconciles what you write against the full check list. Any check you omit is reported as **"Not determined — no result was reported for this check"** and placed in the report's "Not Applicable / Not Determined" section, where it cannot affect the recommendation. That is a safety net, not a shortcut: an omitted check tells the reader nothing was verified. If a check does not apply, say so explicitly with `applicable: false` rather than leaving it out. Never mark a check `passed: true` that you did not actually evaluate.
+
 The severity values must be lowercase: `"reject"`, `"correction"`, or `"note"`.
 
 #### Phase 3: Build Report (Script)

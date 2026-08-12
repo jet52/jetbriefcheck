@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from core.models import BriefMetadata, BriefType, CheckResult, ComplianceReport, Recommendation, Severity
 from core.report_builder import build_html_report
+from core.semantic_definitions import SEMANTIC_CHECKS
 from core.version_check import get_version_stamp
 
 
@@ -148,6 +149,45 @@ def _extract_case_info(cover_text: str, pdf_path: str) -> tuple[str, str, str]:
     return case_number, case_title, brief_label
 
 
+def _missing_semantic_results(
+    reported: list[CheckResult], brief_type: BriefType
+) -> list[CheckResult]:
+    """Account for semantic checks absent from the semantic JSON.
+
+    SKILL.md requires every semantic check to appear in the results, but
+    nothing enforced it: a check omitted from the JSON simply vanished from
+    the report — not passed, not failed, not listed as inapplicable, no trace
+    that it was ever meant to run.  A reader saw no row and had no way to
+    know one was missing.
+
+    Emit an undetermined result for each.  ``applicable=False`` keeps it out
+    of both tallies and out of the recommendation, exactly as for a check the
+    API path failed to evaluate: not checked must never read as checked.
+    """
+    seen = {r.check_id for r in reported}
+    missing = []
+    for check_id, name, rule, types, severity, _desc in SEMANTIC_CHECKS:
+        if check_id in seen:
+            continue
+        if types is not None and brief_type not in types:
+            # Genuinely inapplicable to this brief type — expected absence.
+            missing.append(CheckResult(
+                check_id=check_id, name=name, rule=rule,
+                passed=True, severity=severity, applicable=False,
+                message=f"Not applicable to {brief_type.value} briefs.",
+            ))
+        else:
+            missing.append(CheckResult(
+                check_id=check_id, name=name, rule=rule,
+                passed=False, severity=severity, applicable=False,
+                message="Not determined — no result was reported for this check.",
+                details="This check applies to this brief type but was absent "
+                        "from the semantic analysis. It has not been verified "
+                        "either way; review it manually.",
+            ))
+    return missing
+
+
 def main():
     parser = argparse.ArgumentParser(description="Merge results and build HTML compliance report.")
     parser.add_argument("--intermediate", required=True, help="Path to intermediate JSON from check_brief.py")
@@ -176,6 +216,10 @@ def main():
     # Load semantic results
     semantic_data = json.loads(semantic_path.read_text(encoding="utf-8"))
     sem_results = _parse_results(semantic_data["semantic_results"])
+
+    # Account for every semantic check that was supposed to run
+    brief_type_for_checks = BriefType(intermediate["brief_type"])
+    sem_results.extend(_missing_semantic_results(sem_results, brief_type_for_checks))
 
     # Merge all results
     all_results = mech_results + sem_results
