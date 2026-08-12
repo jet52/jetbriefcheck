@@ -348,6 +348,25 @@ class TestEstimateLineSpacingSynthetic:
         result = _estimate_line_spacing([block_a, block_b])
         assert result == pytest.approx(24.0, abs=0.5)
 
+    def test_consecutive_single_line_blocks_measured(self):
+        """Single-line blocks: spacing measured baseline-to-baseline across them.
+
+        This is the common production layout — MuPDF splits double-spaced
+        lines into one block each, so intra-block measurement finds nothing.
+        """
+        blocks = [_make_block([100 + i * 24.0]) for i in range(10)]
+        result = _estimate_line_spacing(blocks)
+        assert result == pytest.approx(24.0, abs=0.5)
+
+    def test_inter_block_gap_over_limit_excluded(self):
+        """A section break between single-line blocks (>60 pt) is filtered."""
+        # Two groups of single-line blocks at 24 pt, separated by a 200 pt gap
+        ys = [100 + i * 24.0 for i in range(5)]
+        ys += [ys[-1] + 200.0 + i * 24.0 for i in range(5)]
+        blocks = [_make_block([y]) for y in ys]
+        result = _estimate_line_spacing(blocks)
+        assert result == pytest.approx(24.0, abs=0.5)
+
     def test_mixed_spacing_blocks_uses_median(self):
         """When blocks have different spacings, median wins."""
         # 3 gaps at 14 pt (single) + 5 gaps at 24 pt (double)
@@ -381,11 +400,11 @@ class TestEstimateLineSpacingPDF:
     """Verify that PDFs with exact TL values produce correct origin spacings.
 
     Note: MuPDF's block detection groups nearby lines into a single block
-    but splits widely-spaced lines into separate blocks.  When all lines
-    land in separate blocks, ``_estimate_line_spacing`` returns ``None``
-    because it only measures inter-line distance *within* blocks.
-    These tests document both the PDF fidelity and the block-grouping
-    behavior.
+    but splits widely-spaced lines into separate blocks — so a double-spaced
+    brief typically yields one line per block.  ``_estimate_line_spacing``
+    handles both layouts: it measures gaps *within* a block, and also
+    baseline-to-baseline gaps *between* consecutive single-line blocks.
+    These tests cover both the PDF fidelity and both measurement paths.
     """
 
     # -- Verify PDF encoding fidelity (origin spacings) ------------------
@@ -434,26 +453,30 @@ class TestEstimateLineSpacingPDF:
         assert result is not None
         assert result == pytest.approx(MS_WORD_115_12PT, abs=0.5)
 
-    def test_double_spacing_blocks_split(self):
-        """Double-spaced PDF: MuPDF splits lines into separate blocks.
+    def test_double_spacing_recovered_from_split_blocks(self):
+        """Double-spaced PDF (28.8 pt): measured via the inter-block path.
 
-        This is expected behavior — MuPDF's block detection uses spatial
-        proximity, so widely-spaced lines each become their own block.
-        ``_estimate_line_spacing`` returns None because no block has
-        multiple lines.
+        MuPDF's block detection uses spatial proximity, so widely-spaced
+        lines each become their own block and no intra-block gap exists.
+        ``_estimate_line_spacing`` still recovers the spacing by measuring
+        baseline-to-baseline between consecutive single-line blocks.
         """
         blocks = _pdf_blocks(MS_WORD_DOUBLE_12PT)
         text_blocks = [b for b in blocks if b["type"] == 0]
-        # Each line in its own block
+        # Precondition: each line in its own block, so nothing to measure
+        # within a block — the value below must come from the inter-block pass.
         for b in text_blocks:
             assert len(b.get("lines", [])) <= 1
-        # Therefore no intra-block spacing can be measured
-        assert _estimate_line_spacing(blocks) is None
+        result = _estimate_line_spacing(blocks)
+        assert result is not None
+        assert result == pytest.approx(MS_WORD_DOUBLE_12PT, abs=0.5)
 
-    def test_adobe_double_blocks_split(self):
-        """Adobe 24 pt double spacing: also splits into separate blocks."""
+    def test_adobe_double_recovered_from_split_blocks(self):
+        """Adobe 24 pt double spacing: also recovered across split blocks."""
         blocks = _pdf_blocks(ADOBE_DOUBLE_12PT)
-        assert _estimate_line_spacing(blocks) is None
+        result = _estimate_line_spacing(blocks)
+        assert result is not None
+        assert result == pytest.approx(ADOBE_DOUBLE_12PT, abs=0.5)
 
     def test_10pt_single_from_pdf(self):
         """10 pt single spacing (12.0 pt leading) detected from PDF."""
@@ -489,11 +512,12 @@ class TestExtractBriefLineSpacing:
         finally:
             Path(tmp).unlink(missing_ok=True)
 
-    def test_extract_brief_double_spaced_returns_none(self):
-        """extract_brief gets None spacing for double-spaced PDF (block split).
+    def test_extract_brief_double_spaced(self):
+        """extract_brief reports double spacing for a 28.8 pt PDF.
 
-        When no page reports a line_spacing value, has_double_spacing
-        defaults to True (assumed compliant).
+        MuPDF splits the widely-spaced lines into one block each; the
+        inter-block measurement path recovers the spacing anyway, so the
+        value is measured rather than defaulted.
         """
         from core.pdf_extract import extract_brief
 
@@ -503,8 +527,11 @@ class TestExtractBriefLineSpacing:
             tmp = f.name
         try:
             meta = extract_brief(tmp)
-            assert meta.pages[0].line_spacing is None
-            # No measurable spacing → default True
+            assert meta.pages[0].line_spacing is not None
+            assert meta.pages[0].line_spacing == pytest.approx(
+                MS_WORD_DOUBLE_12PT, abs=0.5
+            )
+            # 28.8 pt >= 20.0 pt → double-spaced
             assert meta.has_double_spacing is True
         finally:
             Path(tmp).unlink(missing_ok=True)
