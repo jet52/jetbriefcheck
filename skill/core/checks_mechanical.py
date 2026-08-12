@@ -12,6 +12,7 @@ from collections import Counter
 
 from core.constants import (
     FONT_NONCOMPLIANT_THRESHOLD,
+    LEADING_TO_FONT_FULL_SIZE_RATIO,
     MARGIN_TOLERANCE,
     MAX_CHARS_PER_INCH,
     MIN_BOTTOM_MARGIN,
@@ -247,6 +248,69 @@ def _is_conventional_small_caps_page(
     return any(pat.search(text) for pat in _CONVENTIONAL_SC_PATTERNS)
 
 
+def _explain_document_wide_undersize(
+    metadata: BriefMetadata, predominant: float
+) -> str:
+    """Explain a body font that is undersized throughout the document.
+
+    A brief whose *predominant* size is below 12pt is a different problem
+    from one with scattered sub-12pt spans: the body type itself is small,
+    so a per-page character breakdown tells the filer nothing actionable.
+    Two causes produce this, and they call for opposite corrections:
+
+    * the page was scaled down after composition ("shrink to fit" printing,
+      a file-size reduction pass) — the source is likely already compliant
+      and needs refiling at 100%;
+    * the brief was composed in undersized type — it needs restyling.
+
+    Line spacing distinguishes them in one direction only.  Scaling shrinks
+    type and leading together, so full-size leading beside small type proves
+    the page was *not* scaled.  The converse does not hold: a document
+    composed at 10pt with matching leading is geometrically identical to a
+    12pt document scaled to 83%, and nothing in the PDF separates them.  So
+    we assert the negative and hedge the positive.
+    """
+    body_spacing = [p.line_spacing for p in metadata.pages[1:] if p.line_spacing]
+    lines = [
+        f"Body text measures {predominant:.1f}pt throughout, not merely on "
+        f"scattered spans — the per-page counts below reflect that, and are "
+        f"not a list of stray characters to hunt down."
+    ]
+
+    if not body_spacing:
+        lines.append(
+            "Line spacing could not be measured, so the cause cannot be "
+            "narrowed further. Check whether the source document was 12pt "
+            "and the PDF was reduced in conversion."
+        )
+        return "\n".join(lines)
+
+    spacing = statistics.median(body_spacing)
+    ratio = spacing / predominant
+
+    if ratio >= LEADING_TO_FONT_FULL_SIZE_RATIO:
+        lines.append(
+            f"Line spacing measures {spacing:.1f}pt — full size for a 12pt "
+            f"brief — while the type is {predominant:.1f}pt. The page was "
+            f"therefore not scaled down; the typeface itself is undersized "
+            f"and the brief needs to be reset in 12pt or larger."
+        )
+    else:
+        scale = predominant / MIN_FONT_SIZE_PT * 100
+        lines.append(
+            f"Line spacing ({spacing:.1f}pt) is reduced in the same "
+            f"proportion as the type, which is what happens when a whole "
+            f"page is scaled — a \"shrink to fit\" print setting or a "
+            f"file-size reduction pass. If the source document was 12pt, "
+            f"refiling it at 100% scale (this PDF is at roughly "
+            f"{scale:.0f}%) should resolve this without restyling. "
+            f"Caution: a brief genuinely composed at {predominant:.1f}pt "
+            f"with matching leading looks identical here, so confirm "
+            f"against the source before advising the filer."
+        )
+    return "\n".join(lines)
+
+
 def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
     """FMT-006: Font size >= 12pt with per-page detail, categorisation, and
     small-caps awareness.
@@ -370,14 +434,30 @@ def _check_font_size_per_page(metadata: BriefMetadata) -> CheckResult:
     )
     severity = Severity.REJECT if any_serious else Severity.NOTE
 
-    page_label = "page" if len(bad_page_nums) == 1 else "pages"
-    message = (
-        f"Font size {global_min:.1f}pt found on {page_label} "
-        f"{_page_list(bad_page_nums)}; minimum is {MIN_FONT_SIZE_PT}pt."
-    )
+    # A predominant size below the minimum means the body type is undersized
+    # document-wide, which is a different finding — and a different cure —
+    # from scattered sub-12pt spans.  Lead with that rather than with the
+    # smallest stray character on the page.
+    doc_wide = predominant is not None and predominant < threshold
+
+    if doc_wide:
+        message = (
+            f"Body text is {predominant:.1f}pt throughout; "
+            f"minimum is {MIN_FONT_SIZE_PT}pt."
+        )
+    else:
+        page_label = "page" if len(bad_page_nums) == 1 else "pages"
+        message = (
+            f"Font size {global_min:.1f}pt found on {page_label} "
+            f"{_page_list(bad_page_nums)}; minimum is {MIN_FONT_SIZE_PT}pt."
+        )
 
     # Build per-page breakdown
-    lines = [
+    lines = []
+    if doc_wide:
+        lines.append(_explain_document_wide_undersize(metadata, predominant))
+        lines.append("")
+    lines += [
         f"Predominant font size: {metadata.predominant_font_size}pt. "
         f"Smallest detected: {global_min:.1f}pt.",
         "",

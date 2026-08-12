@@ -620,3 +620,102 @@ class TestSmallCapsIntegration:
         assert result.passed is False
         assert result.severity == Severity.REJECT
         assert "15 body" in result.details
+
+
+# ---------------------------------------------------------------------------
+# Document-wide undersize diagnosis
+# ---------------------------------------------------------------------------
+
+def _spaced_page(page_number: int, fonts: list[dict],
+                 line_spacing: float | None = None) -> PageInfo:
+    """A page carrying a measured line spacing (needed for the diagnosis)."""
+    p = _make_page(page_number, fonts)
+    p.line_spacing = line_spacing
+    return p
+
+
+class TestDocumentWideUndersize:
+    """FMT-006 when the *predominant* size is itself below 12pt.
+
+    A brief whose body type is undersized throughout is a different finding
+    from one with scattered sub-12pt spans, and the two need opposite
+    corrections — refile at full scale vs. reset the type.  Line spacing
+    separates them in one direction: full-size leading beside small type
+    proves the page was not scaled.
+    """
+
+    def _meta(self, predominant: float, spacing: float | None):
+        fonts = [_make_font(size=predominant, chars=2000, origin_y=400.0)]
+        pages = [
+            _spaced_page(0, fonts, spacing),
+            _spaced_page(1, fonts, spacing),
+            _spaced_page(2, fonts, spacing),
+        ]
+        return _make_metadata(pages, predominant_font_size=predominant)
+
+    def test_message_leads_with_document_wide_finding(self):
+        """The headline names the body size, not the smallest stray char."""
+        result = _check_font_size_per_page(self._meta(9.9, 28.3))
+        assert result.passed is False
+        assert "Body text is 9.9pt throughout" in result.message
+        # Not the scattered-span phrasing
+        assert "found on page" not in result.message
+
+    def test_full_size_leading_rules_out_scaling(self):
+        """28.3pt leading on 9.9pt type — the page was not scaled."""
+        result = _check_font_size_per_page(self._meta(9.9, 28.3))
+        assert "not scaled down" in result.details
+        assert "reset in 12pt or larger" in result.details
+        # Must not offer the refile-at-100% cure, which would be wrong here
+        assert "100% scale" not in result.details
+
+    def test_proportional_leading_suggests_scaling(self):
+        """25.3pt leading on 11.0pt type — type and leading shrank together."""
+        result = _check_font_size_per_page(self._meta(11.0, 25.3))
+        assert "scaled" in result.details
+        assert "100% scale" in result.details
+        assert "roughly 92%" in result.details
+
+    def test_scaling_inference_is_hedged(self):
+        """The positive inference is not provable and must say so."""
+        result = _check_font_size_per_page(self._meta(11.0, 25.3))
+        assert "Caution" in result.details
+        assert "looks identical" in result.details
+
+    def test_ratio_boundary_treated_as_full_size(self):
+        """Exactly at the ratio threshold counts as full-size leading."""
+        # 26.0 / 10.0 == 2.6 == LEADING_TO_FONT_FULL_SIZE_RATIO
+        result = _check_font_size_per_page(self._meta(10.0, 26.0))
+        assert "not scaled down" in result.details
+
+    def test_unmeasurable_spacing_declines_to_guess(self):
+        """No spacing data → say so rather than pick a cause."""
+        result = _check_font_size_per_page(self._meta(9.9, None))
+        assert "could not be measured" in result.details
+        assert "cannot be narrowed" in result.details
+        assert "not scaled down" not in result.details
+
+    def test_severity_unchanged_by_diagnosis(self):
+        """The diagnosis changes the wording, never the outcome."""
+        result = _check_font_size_per_page(self._meta(9.9, 28.3))
+        assert result.severity == Severity.REJECT
+
+    def test_per_page_breakdown_retained(self):
+        """The breakdown still appears below the diagnosis."""
+        result = _check_font_size_per_page(self._meta(9.9, 28.3))
+        assert "Per-page breakdown:" in result.details
+        assert "Predominant font size: 9.9pt" in result.details
+
+    def test_localized_undersize_keeps_per_page_message(self):
+        """Predominant 12pt with a few small spans is NOT document-wide."""
+        pages = [
+            _spaced_page(0, [_make_font(size=12.0, chars=2000)], 27.6),
+            _spaced_page(1, [_make_font(size=12.0, chars=2000),
+                             _make_font(size=11.0, chars=100, origin_y=400.0)], 27.6),
+        ]
+        meta = _make_metadata(pages, predominant_font_size=12.0)
+        result = _check_font_size_per_page(meta)
+        assert result.passed is False
+        assert "found on page" in result.message
+        assert "throughout" not in result.message
+        assert "Body text measures" not in (result.details or "")

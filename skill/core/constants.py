@@ -32,6 +32,17 @@ SMALL_CAPS_SUSPICIOUS_PAGE_PCT = 15.0  # % of page chars; above this, small caps
 # We allow some tolerance: anything >= 20pt is "double-spaced."
 MIN_DOUBLE_SPACE_PTS = 20.0
 
+# Ratio of measured line spacing to predominant font size.  Used only to
+# explain a document-wide undersize (FMT-006), never to decide it.
+#
+# When a page is scaled down, type and leading shrink together, so the ratio
+# is unchanged.  When the type alone is undersized, the leading stays full
+# size and the ratio rises.  Compliant 12pt briefs in test-data/ cluster
+# tightly at 2.30 (27.6pt leading); the two briefs with genuinely undersized
+# type sit at 2.85-2.86.  The midpoint separates them with wide margin either
+# side.
+LEADING_TO_FONT_FULL_SIZE_RATIO = 2.6
+
 # --- Page limits ---
 PAGE_LIMITS = {
     BriefType.APPELLANT: 38,
