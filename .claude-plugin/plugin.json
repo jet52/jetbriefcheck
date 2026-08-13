@@ -1,6 +1,6 @@
 {
   "name": "jetbriefcheck",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Check North Dakota appellate brief PDFs for compliance with the Rules of Appellate Procedure and produce a compliance report.",
   "author": {
     "name": "JET"
