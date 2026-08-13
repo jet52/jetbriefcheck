@@ -174,8 +174,10 @@ def _render_citation_review(report: ComplianceReport) -> str:
                 bits = []
                 if f.exists == "not_found":
                     bits.append("citation not found")
-                if f.name_matches is False:
-                    bits.append(f"case name does not match ({_esc(f.antecedent_name or '')})")
+                if f.name_drifted:
+                    bits.append(
+                        f"brief names it {_esc(f.antecedent_name or '?')}; "
+                        f"the reporter shows {_esc(f.canonical_name or '?')}")
                 if f.quotation_result in ("altered", "not_found"):
                     bits.append(f"quotation {_esc(f.quotation_result).replace('_', ' ')}")
                 if f.support in ("partially_supports", "does_not_appear_to_support"):

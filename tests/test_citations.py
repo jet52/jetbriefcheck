@@ -415,3 +415,84 @@ class TestAdvisoryFirewall:
         html = build_html_report(ComplianceReport(
             brief_type=BriefType.APPELLANT, recommendation=Recommendation.ACCEPT))
         assert "Citation Review" not in html
+
+
+class TestNameDriftCalibration:
+    """Calibrated against a live ndlaw run, not intuition.
+
+    ndlaw compares the name as written against a canonical short form, so a
+    correct citation in a longer style scores well below 1.0. A real brief
+    citing "Davis o/b/o HJR & CER v. Romanyshyn" scored 0.667 against the
+    canonical "Davis, et al. v. Romanyshyn" — the same case, correctly cited.
+    Flagging on any mismatch would have reported that as an error.
+    """
+
+    def test_stylistic_variance_is_not_flagged(self):
+        f = CitationFinding(
+            cite="2025 ND 18", exists=EXISTS_CONFIRMED, name_matches=False,
+            name_similarity=0.667,
+            antecedent_name="Davis o/b/o HJR & CER v. Romanyshyn",
+            canonical_name="Davis, et al. v. Romanyshyn")
+        assert f.name_drifted is False
+        assert f.flagged is False
+
+    def test_a_genuinely_different_case_is_flagged(self):
+        f = CitationFinding(cite="2024 ND 88", exists=EXISTS_CONFIRMED,
+                            name_matches=False, name_similarity=0.12,
+                            antecedent_name="Smith v. Jones",
+                            canonical_name="Torgerson v. Bexley")
+        assert f.name_drifted is True
+        assert f.flagged is True
+
+    def test_mismatch_without_a_score_is_flagged(self):
+        """No similarity reported — raise it rather than assume it is style."""
+        f = CitationFinding(cite="x", name_matches=False)
+        assert f.name_drifted is True
+
+
+class TestExtractionAgainstRealBriefPatterns:
+    """Shapes taken from a live run over a filed brief.
+
+    Each of these was wrong at some point during that run, and each error
+    would have produced a false flag against a correctly drafted brief.
+    """
+
+    def test_name_does_not_swallow_the_preceding_sentence(self):
+        """A widened token set plus IGNORECASE let names absorb prose."""
+        text = ("This Court cannot properly review a decision if the district "
+                "court fails to make adequate findings. State v. Juntunen, "
+                "2014 ND 86, ¶ 3, 845 N.W.2d 325.")
+        assert _one(text, ND_CASE).antecedent_name == "State v. Juntunen"
+
+    def test_connectors_survive_in_a_party_name(self):
+        text = "Davis o/b/o HJR & CER v. Romanyshyn, 2025 ND 18, ¶ 11."
+        assert _one(text, ND_CASE).antecedent_name == "Davis o/b/o HJR & CER v. Romanyshyn"
+
+    def test_quotation_attaches_to_the_citation_that_follows_it(self):
+        """A quote introduces the cite after it, not the one before."""
+        text = (
+            "[10] Findings must be adequate. State v. Juntunen, 2014 ND 86, ¶ 3.\n"
+            "“A court’s findings are adequate if this Court is able to discern the "
+            "factual basis for the decision.” State v. P.K., 2020 ND 235, ¶ 15.\n"
+        )
+        cites = {c.normalized: c for c in extract_citations(text)}
+        assert cites["2014 ND 86"].quotation is None
+        assert "adequate" in (cites["2020 ND 235"].quotation or "")
+
+    def test_parenthetical_quotation_still_attaches_backwards(self):
+        text = 'Koon v. State, 2023 ND 247, ¶ 11 (“an arbitrary or unreasonable manner”).'
+        assert "arbitrary" in (_one(text, ND_CASE).quotation or "")
+
+    def test_page_number_inside_a_quotation_is_dropped(self):
+        """Extraction interleaves page numbers; ndlaw would read it as altered."""
+        text = ('“A court’s findings afford a clear understanding of \n\n8 \n\nits '
+                'decision.” State v. P.K., 2020 ND 235, ¶ 15.')
+        quote = _one(text, ND_CASE).quotation
+        assert quote is not None
+        assert " 8 " not in quote
+        assert "understanding of its decision" in quote
+
+    def test_bracketed_paragraph_marker_is_recognised(self):
+        """Real briefs number paragraphs "[¶ 10]", not only "[10]"."""
+        text = "[¶ 10] Findings must be adequate. State v. Juntunen, 2014 ND 86, ¶ 3."
+        assert _one(text, ND_CASE).paragraph == 10

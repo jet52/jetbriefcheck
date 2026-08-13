@@ -115,19 +115,37 @@ _PINPOINT_RE = re.compile(
     re.IGNORECASE,
 )
 
-# "Torgerson v. Bexley" immediately preceding a cite
+# Case names run left from the "v." across more than capitalised words:
+# "Davis o/b/o HJR & CER v. Romanyshyn", "State ex rel. Smith v. Jones",
+# "Olson et al. v. Berg".  Truncating at a connector produces a fragment, and
+# a fragment compared against the canonical name reads as name drift — a
+# false flag on a correctly cited case.
+#
+# The connectors are spelled in both cases explicitly rather than with the
+# IGNORECASE flag: the flag would also let [A-Z] match lowercase, and the
+# name would then walk left through ordinary prose and swallow the sentence.
+_NAME_CONNECTOR = (
+    r"(?:o/b/o|O/B/O|ex\s+rel\.?|Ex\s+rel\.?|et\s+al\.?|Et\s+al\.?|&|"
+    r"on\s+behalf\s+of|In\s+re|in\s+re)"
+)
+_NAME_WORD = r"[A-Z][\w.'’-]*"
+_NAME_TOKEN = rf"(?:{_NAME_WORD}|{_NAME_CONNECTOR})"
 _CASE_NAME_RE = re.compile(
-    r"(?P<name>(?:[A-Z][\w.'’-]*\s+)*[A-Z][\w.'’-]*"
+    rf"(?P<name>{_NAME_TOKEN}(?:\s+{_NAME_TOKEN})*"
     r"\s+v\.?\s+"
-    r"(?:[A-Z][\w.'’-]*\s*)+?)"
+    rf"{_NAME_TOKEN}(?:\s+{_NAME_TOKEN})*?)"
     r"[\s,]*$"
 )
 
 # A quotation of at least a few words, straight or curly
 _QUOTE_RE = re.compile(r"[\"“]([^\"”]{12,600})[\"”]")
 
-# Brief paragraph markers: "[12]" or "¶ 12" at the start of a paragraph
-_BRIEF_PARA_RE = re.compile(r"(?:^|\n)\s*(?:\[(\d{1,4})\]|¶\s*(\d{1,4}))")
+# Brief paragraph markers.  Rule 32(a)(7) requires arabic paragraph numbers
+# but not a particular decoration, and real briefs use several: "[12]",
+# "¶ 12", and "[¶ 12]".  Missing a form collapses the paragraph bounds, which
+# is what confines a quotation to its own citation — so all are matched.
+_BRIEF_PARA_RE = re.compile(
+    r"(?:^|\n)\s*(?:\[\s*¶?\s*(\d{1,4})\s*\]|¶+\s*(\d{1,4}))")
 
 # Abbreviations that take a period mid-sentence.  Splitting naively on ". "
 # turns "Torgerson v. Bexley" into two sentences and truncates the
@@ -242,12 +260,17 @@ def _paragraph_bounds(text: str, offset: int) -> tuple[int, int]:
     citation in the brief.
     """
     starts = [m.start() for m in _BRIEF_PARA_RE.finditer(text)]
-    para_start = max((s for s in starts if s <= offset), default=None)
-    para_end = min((s for s in starts if s > offset), default=len(text))
-    if para_start is None:
-        blank = text.rfind("\n\n", 0, offset)
-        para_start = blank + 2 if blank != -1 else 0
-    return para_start, para_end
+    if starts:
+        para_start = max((s for s in starts if s <= offset), default=0)
+        para_end = min((s for s in starts if s > offset), default=len(text))
+        return para_start, para_end
+
+    # No numbered paragraphs — Rule 32(a)(7) requires them, but the checker
+    # still has to work on a brief that omits them.  A blank-line split is
+    # unreliable here: extraction inserts blank lines at page breaks, which
+    # can fall inside a quotation and hide it from the citation it belongs
+    # to.  Use a plain window instead.
+    return max(0, offset - 900), min(len(text), offset + 400)
 
 
 def _quotation_near(text: str, start: int, end: int) -> Optional[str]:
@@ -259,27 +282,70 @@ def _quotation_near(text: str, start: int, end: int) -> Optional[str]:
     away is somebody else's.
     """
     para_start, para_end = _paragraph_bounds(text, start)
-    before = text[max(para_start, start - 700):start]
-    quotes = _QUOTE_RE.findall(before)
-    if quotes:
-        return _normalize_space(quotes[-1])
+
+    # Look back only as far as the closing quotation mark, and only accept it
+    # when what sits between the quote and the cite is citation apparatus —
+    # a case name, a signal, punctuation.  A paragraph carrying several cites
+    # otherwise hands every one of them the first quotation in the paragraph.
+    before = text[max(para_start, start - 900):start]
+    matches = list(_QUOTE_RE.finditer(before))
+    if matches:
+        last = matches[-1]
+        between = before[last.end():]
+        if _CITE_APPARATUS_RE.fullmatch(between.strip()) is not None:
+            return _clean_quote(last.group(1))
+
+    # A quotation *after* a citation belongs to it only when it sits in a
+    # parenthetical attached to the cite — Smith, 2020 ND 1 ("the text").
+    # Otherwise the quotation introduces the next citation, and attributing
+    # it here shifts every quote in a string of citations one place.
     after = text[end:min(para_end, end + 300)]
-    quotes = _QUOTE_RE.findall(after)
-    if quotes:
-        return _normalize_space(quotes[0])
+    matches = list(_QUOTE_RE.finditer(after))
+    gap = after[:matches[0].start()] if matches else ""
+    if matches and re.fullmatch(r"[\s,]*(?:¶+\s*[\d\s,–-]*)?[\s,]*\(\s*", gap):
+        return _clean_quote(matches[0].group(1))
     return None
+
+
+# What may legitimately sit between a quotation and the citation it belongs
+# to: a case name, a signal, a pinpoint, punctuation.  Tokens are separated,
+# so the separator has to be part of the repetition — without it, "State v.
+# P.K.," fails to match and every quotation is silently dropped.
+_APPARATUS_TOKEN = (
+    r"(?:[A-Z][\w.'’-]*|v\.?|see|also|accord|cf\.?|e\.?g\.?|quoting|citing|"
+    r"internal|citations?|omitted|ex|rel\.?|et|al\.?|o/b/o|in|re|at|id\.?|"
+    r"supra|¶+|\d+|N\.?W\.?\s?\d?d?|N\.?D\.?)"
+)
+_CITE_APPARATUS_RE = re.compile(
+    rf"(?:[\s,;.()\[\]&’'\"“”-]*{_APPARATUS_TOKEN})*[\s,;.()\[\]-]*"
+)
+
+# A page number lands in the middle of extracted text and breaks a quotation
+# that is otherwise verbatim.
+_STRAY_PAGE_NUM_RE = re.compile(r"\s+\d{1,3}\s+(?=[a-z])")
+
+
+def _clean_quote(raw: str) -> str:
+    """Normalize a quotation and drop page numbers extraction left inside it."""
+    return _normalize_space(_STRAY_PAGE_NUM_RE.sub(" ", _normalize_space(raw)))
 
 
 def _antecedent_name(text: str, start: int) -> Optional[str]:
     """The case name immediately before a citation, if any."""
-    window = text[max(0, start - 120):start]
+    window = text[max(0, start - 200):start]
     m = _CASE_NAME_RE.search(_normalize_space(window))
     if not m:
         return None
     name = _normalize_space(m.group("name"))
     # Guard against swallowing a lead-in verb or signal
-    name = re.sub(r"^(?:see|accord|cf|e\.?g\.?|but see|citing|quoting|in)\s+", "",
-                  name, flags=re.IGNORECASE)
+    name = re.sub(
+        r"^(?:see(?:\s+(?:also|generally))?|accord|cf\.?|e\.?g\.?|but\s+see|citing|"
+        r"quoting|contra|compare|the\s+court\s+in|as\s+articulated\s+in|"
+        r"this\s+Court\s+(?:ruled|held)\s+in|and|of|the)\s+",
+        "", name, flags=re.IGNORECASE).strip()
+    # A name must still contain the "v." anchor after stripping
+    if " v" not in name.lower():
+        return None
     return name or None
 
 
@@ -483,6 +549,14 @@ DOES_NOT_SUPPORT = "does_not_appear_to_support"
 COULD_NOT_RETRIEVE = "could_not_retrieve"
 NOT_ASSESSED = "not_assessed"
 
+# Below this name similarity, a mismatch is worth raising.  ndlaw compares
+# the name as written against a canonical short form, so a legitimate longer
+# style scores well short of 1.0 without being wrong: a real brief citing
+# "Davis o/b/o HJR & CER v. Romanyshyn" scores 0.667 against the canonical
+# "Davis, et al. v. Romanyshyn" — the same case, correctly cited. Flagging on
+# any mismatch would fire on that. A genuinely wrong case shares little.
+NAME_SIMILARITY_FLOOR = 0.5
+
 QUOTE_VERBATIM = "verbatim"
 QUOTE_ALTERED = "altered"
 QUOTE_NOT_FOUND = "not_found"
@@ -506,21 +580,37 @@ class CitationFinding:
     quotation: Optional[str] = None
     exists: str = UNCHECKED
     name_matches: Optional[bool] = None
+    name_similarity: Optional[float] = None
+    canonical_name: Optional[str] = None
     quotation_result: Optional[str] = None
     support: str = NOT_ASSESSED
     retrieved_excerpt: str = ""
     reason: str = ""
 
     @property
+    def name_drifted(self) -> bool:
+        """True when the name difference looks like more than style.
+
+        Naming the same case a longer way is not an error, so a mismatch
+        only counts when the names barely resemble each other.
+        """
+        if self.name_matches is not False:
+            return False
+        if self.name_similarity is None:
+            return True
+        return self.name_similarity < NAME_SIMILARITY_FLOOR
+
+    @property
     def flagged(self) -> bool:
         """True when this citation is worth a reader's attention.
 
         A wrong case name on a real citation counts: the authority exists,
-        but it is not the one the brief says it is.
+        but it is not the one the brief says it is.  A merely stylistic
+        difference in the name does not — see NAME_SIMILARITY_FLOOR.
         """
         return (
             self.exists in _FLAGGED_EXISTENCE
-            or self.name_matches is False
+            or self.name_drifted
             or self.quotation_result in _FLAGGED_QUOTATION
             or self.support in _FLAGGED_SUPPORT
         )
@@ -536,6 +626,8 @@ class CitationFinding:
             quotation=d.get("quotation"),
             exists=d.get("exists", UNCHECKED),
             name_matches=d.get("name_matches"),
+            name_similarity=d.get("name_similarity"),
+            canonical_name=d.get("canonical_name"),
             quotation_result=d.get("quotation_result"),
             support=d.get("support", NOT_ASSESSED),
             retrieved_excerpt=d.get("retrieved_excerpt", ""),
