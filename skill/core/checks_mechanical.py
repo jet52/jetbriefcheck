@@ -628,14 +628,21 @@ def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
 
 
 def _check_footnote_spacing(metadata: BriefMetadata) -> CheckResult:
-    """FMT-010: Footnotes double-spaced, same typeface."""
-    # Footnote detection is imprecise from PDF extraction alone.
-    # We flag this as a NOTE-level advisory check.
+    """FMT-010: Footnotes double-spaced, same typeface.
+
+    Undetermined rather than passed.  Extraction cannot reliably tell a
+    footnote from body text, so nothing here is verified — and a brief whose
+    footnotes are single-spaced would otherwise show a passing FMT-010.
+    """
     return CheckResult(
         check_id="FMT-010", name="Footnote Spacing", rule="32(a)(5)",
-        passed=True, severity=Severity.NOTE,
-        message="Footnote spacing not automatically verified; manual review recommended.",
-        details="PDF extraction cannot reliably distinguish footnotes from body text.",
+        passed=False, severity=Severity.NOTE, applicable=False,
+        message="Not determined — footnote spacing and typeface were not "
+                "verified. Check by eye.",
+        details="Rule 32(a)(5) requires footnotes to be double-spaced and set "
+                "in the same typeface as the body. PDF extraction cannot "
+                "reliably distinguish footnotes from body text, so this "
+                "requirement is unverified, not satisfied.",
     )
 
 
@@ -790,7 +797,10 @@ def _check_page_limit(metadata: BriefMetadata) -> CheckResult:
 def _check_cover_color(metadata: BriefMetadata) -> CheckResult:
     """COV-001: Cover color matches brief type.
 
-    We cannot detect physical cover color from PDF. This check is advisory.
+    Rule 32(a)(2) governs the physical cover, which a PDF cannot show.  The
+    check is therefore always undetermined rather than passed: the colour
+    requirement is real and unverified, and reporting it as satisfied would
+    retire a manual step that nobody performed.
     """
     from core.constants import COVER_COLORS
 
@@ -800,28 +810,33 @@ def _check_cover_color(metadata: BriefMetadata) -> CheckResult:
     if metadata.brief_type == BriefType.PETITION_REHEARING:
         return CheckResult(
             check_id="COV-001", name="Cover Color", rule="32(a)(2)",
-            passed=True, severity=Severity.CORRECTION,
-            message="Petition for rehearing cover must be the same color as the "
-                    "petitioning party's principal brief. Cannot verify from PDF; "
-                    "manual check required.",
+            passed=False, severity=Severity.CORRECTION, applicable=False,
+            message="Not determined — the cover of a petition for rehearing must "
+                    "match the petitioning party's principal brief. Check by eye.",
             details="Rule 32(a)(2): 'Covers of petitions for rehearing must be the "
-                    "same color as the petitioning party's principal brief.'",
+                    "same color as the petitioning party's principal brief.' The "
+                    "petitioning party's principal brief is not in this PDF, and "
+                    "cover color cannot be read from a PDF in any event.",
         )
 
     expected = COVER_COLORS.get(metadata.brief_type)
     if expected:
         return CheckResult(
             check_id="COV-001", name="Cover Color", rule="32(a)(2)",
-            passed=True, severity=Severity.CORRECTION,
-            message=f"Cover color should be {expected} for {metadata.brief_type.value} brief. "
-                    "Cannot verify from PDF; manual check required.",
-            details="PDF analysis cannot detect physical cover color.",
+            passed=False, severity=Severity.CORRECTION, applicable=False,
+            message=f"Not determined — cover must be {expected} "
+                    f"({metadata.brief_type.value.replace('_', ' ')} brief). "
+                    f"Check by eye.",
+            details="Rule 32(a)(2) governs the physical cover; a PDF does not "
+                    "record it. This requirement is unverified, not satisfied.",
         )
     return CheckResult(
         check_id="COV-001", name="Cover Color", rule="32(a)(2)",
-        passed=True, severity=Severity.CORRECTION,
-        message="Cover color check not applicable (unknown brief type).",
-        applicable=False,
+        passed=False, severity=Severity.CORRECTION, applicable=False,
+        message="Not determined — brief type is unknown, so the required cover "
+                "color could not be identified. Check by eye.",
+        details="Rule 32(a)(2) assigns a cover color by brief type. Neither the "
+                "brief type nor the physical cover could be determined here.",
     )
 
 
