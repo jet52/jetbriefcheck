@@ -262,3 +262,156 @@ class TestGroundingScope:
         scope = select_for_grounding([])
         assert scope.total == 0
         assert "Found 0 citation(s)" in scope.coverage_line()
+
+
+# ===================================================================
+# Review results and their firewall from the recommendation
+# ===================================================================
+
+from core.citations import (  # noqa: E402
+    COULD_NOT_RETRIEVE,
+    DOES_NOT_SUPPORT,
+    EXISTS_CONFIRMED,
+    EXISTS_NOT_FOUND,
+    PARTIALLY_SUPPORTS,
+    QUOTE_ALTERED,
+    QUOTE_NOT_FOUND,
+    QUOTE_VERBATIM,
+    SUPPORTS,
+    CitationFinding,
+    CitationReview,
+)
+
+
+class TestFindingFlags:
+    """Which outcomes deserve a reader's attention."""
+
+    def test_sound_citation_is_not_flagged(self):
+        f = CitationFinding(cite="2024 ND 88", exists=EXISTS_CONFIRMED,
+                            name_matches=True, support=SUPPORTS)
+        assert f.flagged is False
+
+    @pytest.mark.parametrize("kwargs", [
+        {"exists": EXISTS_NOT_FOUND},
+        {"name_matches": False},
+        {"quotation_result": QUOTE_ALTERED},
+        {"quotation_result": QUOTE_NOT_FOUND},
+        {"support": PARTIALLY_SUPPORTS},
+        {"support": DOES_NOT_SUPPORT},
+    ])
+    def test_defects_are_flagged(self, kwargs):
+        assert CitationFinding(cite="x", **kwargs).flagged is True
+
+    def test_wrong_name_on_a_real_cite_is_flagged(self):
+        """The authority exists — it is just not the one the brief names."""
+        f = CitationFinding(cite="2024 ND 88", exists=EXISTS_CONFIRMED,
+                            name_matches=False, antecedent_name="Wrong v. Case")
+        assert f.flagged is True
+
+    def test_could_not_retrieve_is_not_a_finding(self):
+        """A failed lookup is not evidence against the brief."""
+        f = CitationFinding(cite="x", exists=EXISTS_CONFIRMED,
+                            support=COULD_NOT_RETRIEVE)
+        assert f.flagged is False
+
+    def test_verbatim_quotation_is_not_flagged(self):
+        assert CitationFinding(cite="x", quotation_result=QUOTE_VERBATIM).flagged is False
+
+
+class TestCitationReview:
+
+    def test_unavailable_says_so_rather_than_going_quiet(self):
+        review = CitationReview.unavailable("ndlaw not configured")
+        assert review.ndlaw_available is False
+        assert "No citation was verified" in review.coverage_line
+        assert "unverified, not confirmed" in review.coverage_line
+
+    def test_round_trips_through_json(self):
+        payload = {
+            "ndlaw_available": True,
+            "coverage_line": "Found 3 citation(s); 2 selected for verification.",
+            "findings": [
+                {"cite": "2024 ND 88", "exists": "confirmed", "support": "supports"},
+                {"cite": "2019 ND 12", "quotation_result": "altered",
+                 "reason": "wording differs"},
+            ],
+        }
+        review = CitationReview.from_dict(payload)
+        assert len(review.findings) == 2
+        assert len(review.flagged) == 1
+        assert len(review.clear) == 1
+
+    def test_unavailable_round_trips(self):
+        review = CitationReview.from_dict({"ndlaw_available": False})
+        assert review.ndlaw_available is False
+        assert review.findings == []
+
+    def test_missing_fields_default_to_unchecked(self):
+        """A sparse record must not read as a confirmed one."""
+        f = CitationFinding.from_dict({"cite": "2024 ND 88"})
+        assert f.exists == "unchecked"
+        assert f.support == "not_assessed"
+        assert f.flagged is False
+
+
+class TestAdvisoryFirewall:
+    """Citation findings must never move the recommendation."""
+
+    def test_review_is_not_a_check_result(self):
+        """Routing findings through `results` would let them score."""
+        from core.models import CheckResult
+        assert not isinstance(CitationFinding(cite="x"), CheckResult)
+
+    def test_report_keeps_the_review_out_of_results(self):
+        from core.models import BriefType, ComplianceReport, Recommendation
+        review = CitationReview(findings=[
+            CitationFinding(cite="2024 ND 88", support=DOES_NOT_SUPPORT)])
+        report = ComplianceReport(
+            brief_type=BriefType.APPELLANT,
+            recommendation=Recommendation.ACCEPT,
+            citation_review=review,
+        )
+        assert report.results == []
+        assert report.failed_checks == []
+        assert report.recommendation == Recommendation.ACCEPT
+
+    def test_hard_rule_recommendation_never_sees_citations(self):
+        """Even a brief whose every citation is unsupported stays ACCEPT."""
+        import importlib.util
+        path = PROJECT_DIR / "skill" / "scripts" / "build_report.py"
+        spec = importlib.util.spec_from_file_location("build_report", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        rec, _ = module._hard_rule_recommendation([])
+        assert rec.value == "accept"
+
+    def test_report_renders_the_advisory_banner(self):
+        from core.models import BriefType, ComplianceReport, Recommendation
+        from core.report_builder import build_html_report
+        review = CitationReview(
+            coverage_line="Found 1 citation(s); 1 selected for verification.",
+            findings=[CitationFinding(cite="2024 ND 88", support=DOES_NOT_SUPPORT,
+                                      reason="passage is about a different question")])
+        html = build_html_report(ComplianceReport(
+            brief_type=BriefType.APPELLANT, recommendation=Recommendation.ACCEPT,
+            citation_review=review))
+        assert "Citation Review" in html
+        assert "not part of the compliance" in html
+        assert "does not appear to support" in html
+
+    def test_unavailable_review_still_renders_a_section(self):
+        from core.models import BriefType, ComplianceReport, Recommendation
+        from core.report_builder import build_html_report
+        html = build_html_report(ComplianceReport(
+            brief_type=BriefType.APPELLANT, recommendation=Recommendation.ACCEPT,
+            citation_review=CitationReview.unavailable()))
+        assert "Citation Review" in html
+        assert "were not" in html and "available" in html
+
+    def test_no_review_renders_no_section(self):
+        """A run without the phase must not imply it happened."""
+        from core.models import BriefType, ComplianceReport, Recommendation
+        from core.report_builder import build_html_report
+        html = build_html_report(ComplianceReport(
+            brief_type=BriefType.APPELLANT, recommendation=Recommendation.ACCEPT))
+        assert "Citation Review" not in html

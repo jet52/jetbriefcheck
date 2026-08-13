@@ -468,3 +468,126 @@ def select_for_grounding(
     scope.selected = ranked[:cap]
     scope.over_cap = ranked[cap:]
     return scope
+
+
+# --- Review results (produced by the retrieval phase, consumed by the report) ---
+
+# Classifications, deliberately including the ones that record a non-answer.
+EXISTS_CONFIRMED = "confirmed"
+EXISTS_NOT_FOUND = "not_found"
+UNCHECKED = "unchecked"
+
+SUPPORTS = "supports"
+PARTIALLY_SUPPORTS = "partially_supports"
+DOES_NOT_SUPPORT = "does_not_appear_to_support"
+COULD_NOT_RETRIEVE = "could_not_retrieve"
+NOT_ASSESSED = "not_assessed"
+
+QUOTE_VERBATIM = "verbatim"
+QUOTE_ALTERED = "altered"
+QUOTE_NOT_FOUND = "not_found"
+
+# Outcomes worth a reader's attention.  Everything else is either sound or
+# openly unchecked, and neither needs a per-citation entry in the report.
+_FLAGGED_EXISTENCE = {EXISTS_NOT_FOUND}
+_FLAGGED_QUOTATION = {QUOTE_ALTERED, QUOTE_NOT_FOUND}
+_FLAGGED_SUPPORT = {PARTIALLY_SUPPORTS, DOES_NOT_SUPPORT}
+
+
+@dataclass
+class CitationFinding:
+    """The result of checking one citation against the retrieved authority."""
+
+    cite: str
+    proposition: str = ""
+    pinpoint: Optional[str] = None
+    antecedent_name: Optional[str] = None
+    brief_paragraph: Optional[int] = None
+    quotation: Optional[str] = None
+    exists: str = UNCHECKED
+    name_matches: Optional[bool] = None
+    quotation_result: Optional[str] = None
+    support: str = NOT_ASSESSED
+    retrieved_excerpt: str = ""
+    reason: str = ""
+
+    @property
+    def flagged(self) -> bool:
+        """True when this citation is worth a reader's attention.
+
+        A wrong case name on a real citation counts: the authority exists,
+        but it is not the one the brief says it is.
+        """
+        return (
+            self.exists in _FLAGGED_EXISTENCE
+            or self.name_matches is False
+            or self.quotation_result in _FLAGGED_QUOTATION
+            or self.support in _FLAGGED_SUPPORT
+        )
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "CitationFinding":
+        return cls(
+            cite=d.get("cite", ""),
+            proposition=d.get("proposition", ""),
+            pinpoint=d.get("pinpoint"),
+            antecedent_name=d.get("antecedent_name"),
+            brief_paragraph=d.get("brief_paragraph"),
+            quotation=d.get("quotation"),
+            exists=d.get("exists", UNCHECKED),
+            name_matches=d.get("name_matches"),
+            quotation_result=d.get("quotation_result"),
+            support=d.get("support", NOT_ASSESSED),
+            retrieved_excerpt=d.get("retrieved_excerpt", ""),
+            reason=d.get("reason", ""),
+        )
+
+
+@dataclass
+class CitationReview:
+    """The citation-grounding pass as a whole.
+
+    Advisory throughout.  Rule compliance is governed by the appellate rules;
+    whether an authority says what the brief says it says is a different
+    question, and it must not move the Accept / Correction Letter / Reject
+    recommendation.  Nothing here is a CheckResult for that reason.
+    """
+
+    ndlaw_available: bool = True
+    coverage_line: str = ""
+    findings: list[CitationFinding] = field(default_factory=list)
+    unavailable_reason: str = ""
+
+    @property
+    def flagged(self) -> list[CitationFinding]:
+        return [f for f in self.findings if f.flagged]
+
+    @property
+    def clear(self) -> list[CitationFinding]:
+        return [f for f in self.findings if not f.flagged]
+
+    @classmethod
+    def unavailable(cls, reason: str = "") -> "CitationReview":
+        """No lookups were possible — say so rather than omitting the section."""
+        return cls(
+            ndlaw_available=False,
+            coverage_line=(
+                "No citation was verified: the ndlaw research tools were not "
+                "available in this session. Citations in this brief are "
+                "unverified, not confirmed."
+            ),
+            unavailable_reason=reason,
+        )
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "CitationReview":
+        if not d.get("ndlaw_available", True):
+            review = cls.unavailable(d.get("unavailable_reason", ""))
+            if d.get("coverage_line"):
+                review.coverage_line = d["coverage_line"]
+            return review
+        return cls(
+            ndlaw_available=True,
+            coverage_line=d.get("coverage_line", ""),
+            findings=[CitationFinding.from_dict(f) for f in d.get("findings", [])],
+        )

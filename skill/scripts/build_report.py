@@ -23,6 +23,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from core.models import BriefMetadata, BriefType, CheckResult, ComplianceReport, Recommendation, Severity
+from core.citations import CitationReview
 from core.report_builder import build_html_report
 from core.semantic_definitions import SEMANTIC_CHECKS, gated_check_result
 from core.version_check import get_version_stamp
@@ -191,6 +192,9 @@ def main():
     parser.add_argument("--intermediate", required=True, help="Path to intermediate JSON from check_brief.py")
     parser.add_argument("--semantic", required=True, help="Path to semantic results JSON from Claude Code")
     parser.add_argument("--output-dir", default=None, help="Directory for HTML report (default: same as intermediate)")
+    parser.add_argument("--citations", default=None,
+                        help="Optional path to citation-grounding JSON. Advisory only; "
+                             "never affects the recommendation.")
     parser.add_argument("--reasoning", default=None, help="Optional reasoning text for the report summary")
     parser.add_argument("--pymupdf", action="store_true", default=True, help="PyMuPDF was used for mechanical checks (default)")
     parser.add_argument("--no-pymupdf", action="store_false", dest="pymupdf", help="PyMuPDF was NOT used (fallback mode)")
@@ -229,6 +233,21 @@ def main():
     if args.reasoning:
         reasoning = args.reasoning
 
+    # Citation grounding, loaded only after the recommendation is fixed. It is
+    # advisory chambers intel and must not reach _hard_rule_recommendation;
+    # loading it here makes that structural rather than a matter of care.
+    citation_review = None
+    if args.citations:
+        citations_path = Path(args.citations)
+        if citations_path.exists():
+            citation_review = CitationReview.from_dict(
+                json.loads(citations_path.read_text(encoding="utf-8")))
+        else:
+            print(f"Warning: citations file not found: {citations_path}",
+                  file=sys.stderr)
+            citation_review = CitationReview.unavailable(
+                f"citation results file not found: {citations_path.name}")
+
     # Build minimal metadata for the report
     brief_type = BriefType(intermediate["brief_type"])
     metadata = BriefMetadata(
@@ -256,6 +275,7 @@ def main():
         brief_label=brief_label,
         pdf_filename=Path(pdf_path_str).name,
         pymupdf_used=args.pymupdf,
+        citation_review=citation_review,
     )
 
     html = build_html_report(report, version_stamp=get_version_stamp(), model=args.model)

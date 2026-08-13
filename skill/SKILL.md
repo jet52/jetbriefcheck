@@ -119,6 +119,88 @@ Each semantic check must appear in the results — either as an evaluated result
 
 The severity values must be lowercase: `"reject"`, `"correction"`, or `"note"`.
 
+#### Phase 2C: Citation Grounding (optional — requires ndlaw)
+
+This phase asks a different question from every other check: not whether the
+brief is *formatted* correctly, but whether the authorities it cites say what
+it says they say. It is **advisory chambers intel and never a filing defect** —
+nothing here may affect the Accept / Correction Letter / Reject recommendation,
+and `build_report.py` loads it only after the recommendation is fixed.
+
+**First, decide whether you can run it.** Check whether ndlaw research tools
+(`mcp__ndlaw__*` or an equivalent connector) are available in this session.
+
+- **Not available** — write the file below with `"ndlaw_available": false` and
+  move on. Do **not** skip the file: the report then states plainly that no
+  citation was verified, which is the honest outcome. Omitting it would let a
+  reader assume the citations were checked and found sound.
+- **Available** — proceed.
+
+**1. Extract and scope.** Ask the script which citations are worth retrieving:
+
+```bash
+$VENV_PYTHON -c "
+import sys, json; sys.path.insert(0, 'CORE_PARENT')
+from core.citations import extract_citations, select_for_grounding
+text = json.load(open('<intermediate-json-path>'))['full_text']
+scope = select_for_grounding(extract_citations(text))
+print(json.dumps(scope.to_dict(), indent=2))
+"
+```
+
+Take the `coverage_line` verbatim — it accounts for every citation found,
+including the ones deliberately not checked.
+
+**2. Verify each selected citation, cheapest check first.** Stop early when a
+step settles the matter.
+
+| Step | Tool | Records |
+|---|---|---|
+| Existence | `verify_citation` | `exists`, and `name_matches` against `antecedent_name` |
+| Quotation | `verify_quotation` | `quotation_result`: `verbatim` / `altered` / `not_found` |
+| Support | `get_pinpoint` (cases), `lookup_authority` (statutes/rules) | `support`, `retrieved_excerpt` |
+
+A wrong case name on a real citation is a finding: the authority exists, but
+it is not the one the brief names. A cite to a statutory subsection that does
+not exist is likewise a finding.
+
+**3. Judge proposition support against the retrieved text, not memory.**
+Retrieve the whole paragraph — a snippet invites reading support into it.
+Classify as `supports`, `partially_supports`, `does_not_appear_to_support`, or
+`could_not_retrieve`.
+
+Partial support is the common and the hard case: a pinpoint that backs half of
+a compound proposition. **Borderline calls go to `partially_supports` with the
+excerpt shown, never silently to `supports`.** If retrieval fails, record
+`could_not_retrieve` — never infer the answer from the case name or your own
+recollection of the authority.
+
+**4. Write `<pdf-stem>-citations.json`:**
+
+```json
+{
+  "ndlaw_available": true,
+  "coverage_line": "Found 42 citation(s); 23 selected for verification; ...",
+  "findings": [
+    {
+      "cite": "2024 ND 88", "pinpoint": "9", "brief_paragraph": 12,
+      "antecedent_name": "Torgerson v. Bexley",
+      "proposition": "A district court's findings are reviewed de novo.",
+      "quotation": null,
+      "exists": "confirmed", "name_matches": true,
+      "quotation_result": null,
+      "support": "does_not_appear_to_support",
+      "retrieved_excerpt": "Findings of fact are reviewed under the clearly erroneous standard.",
+      "reason": "The cited paragraph states a clearly-erroneous standard, not de novo review."
+    }
+  ]
+}
+```
+
+Record every citation you checked, sound ones included — the report shows only
+the flagged ones but counts the rest. Then pass `--citations "<path>"` to
+`build_report.py` in Phase 3.
+
 #### Phase 3: Build Report (Script)
 
 Run the report builder to merge results and generate the HTML report:
@@ -127,6 +209,7 @@ Run the report builder to merge results and generate the HTML report:
 $VENV_PYTHON scripts/build_report.py \
   --intermediate "<intermediate-json-path>" \
   --semantic "<semantic-json-path>" \
+  [--citations "<citations-json-path>"] \
   --model "{runtime model — friendly name and exact ID, e.g. Claude Opus 4.8 (claude-opus-4-8)}"
 ```
 

@@ -74,6 +74,12 @@ pytest tests/
   classifier declines rather than guessing. When the type is UNKNOWN the 15 type-gated semantic checks
   plus PG-001/REC-001 report **not determined**, never "not applicable" — use `gated_check_result`
   (`semantic_definitions.py`), which both execution paths share.
+- **Citation grounding** (`core/citations.py`, SKILL.md Phase 2C): extraction and scoping are
+  deterministic and dependency-free; retrieval runs in the skill phase via ndlaw MCP and comes back as
+  `<stem>-citations.json`. **Advisory only** — findings are a `CitationReview` on `ComplianceReport`,
+  never `CheckResult`s, and `build_report.py` loads them only after the recommendation is fixed. Never
+  route them through `results`. When ndlaw is unavailable, write the file with
+  `"ndlaw_available": false` rather than skipping it.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content

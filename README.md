@@ -126,6 +126,14 @@ The HTML report has several sections:
   - **Correction Required** — problems that should be fixed but don't rise to rejection level (e.g., margin too narrow, missing paragraph numbering).
   - **Advisory Notes** — minor issues or observations (e.g., oral argument notation not found, font style question).
 
+- **Citation Review** *(when the ndlaw research tools are available)* — a separate, advisory section asking a different question from the rest of the report: not whether the brief is formatted correctly, but whether the authorities it cites say what the brief says they say. It targets the failure mode where a citation is real and the passage is real, but the passage does not support the proposition — sound under a "does this case exist" check, unsound under a "does this case say that" check.
+
+  **It is not part of the compliance determination.** Nothing in it affects Accept / Correction Letter / Reject; the recommendation is computed before the section is even loaded. A misgrounded citation is a matter for chambers, not a defect in the filing.
+
+  The section opens with a coverage line accounting for every citation found — including those deliberately not checked (authority outside North Dakota, string cites with no pinpoint or quotation, anything past the lookup cap). Unchecked never reads as confirmed. Each flag shows the brief's proposition, the citation, the retrieved passage, the classification, and a one-line reason. Borderline calls are reported as *partially supports* with the passage shown, never as *supports*.
+
+  When ndlaw is unavailable the section still appears and says no citation was verified, rather than vanishing and leaving the impression the citations were checked and found sound.
+
 - **Passed Checks** — an expandable section listing everything that passed. Click to expand.
 
 - **Not Applicable / Not Determined** — two different things, both kept out of the recommendation. *Not applicable* means the check does not reach this brief type (amicus checks on an appellant brief). *Not determined* means the requirement is real but was never verified — the checker could not reach it, so it is unverified, not satisfied. **COV-001** (cover color) always lands here: Rule 32(a)(2) governs the physical cover, which a PDF does not record, so it needs a human eye on every brief. Others arrive here situationally — line spacing measurable on too few pages, a footer that cannot be read, a semantic check that returned no result.

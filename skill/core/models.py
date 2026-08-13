@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:  # pragma: no cover
+    from core.citations import CitationReview
 
 
 class BriefType(Enum):
@@ -103,6 +106,11 @@ class ComplianceReport:
     brief_label: str = ""       # e.g. "Amended Brief of Defendant-Appellant"
     pdf_filename: str = ""      # original PDF filename
     pymupdf_used: bool = True   # Whether PyMuPDF was used for mechanical checks
+    # Citation grounding, when it ran.  Deliberately NOT a list of
+    # CheckResults: it is advisory chambers intel, and routing it through
+    # `results` would let it move the recommendation, which is governed by
+    # the appellate rules alone.
+    citation_review: Optional["CitationReview"] = None
 
     @property
     def failed_checks(self) -> list[CheckResult]:
