@@ -164,38 +164,38 @@ def _render_citation_review(report: ComplianceReport) -> str:
 
     if not review.ndlaw_available:
         body = f'<p class="none">{_esc(review.coverage_line)}</p>'
-    else:
-        flagged = review.flagged
-        if flagged:
-            rows = ""
-            for f in flagged:
-                where = f" (brief ¶ {f.brief_paragraph})" if f.brief_paragraph else ""
-                pin = f", ¶ {_esc(f.pinpoint)}" if f.pinpoint else ""
-                bits = []
-                if f.exists == "not_found":
-                    bits.append("citation not found")
-                if f.name_drifted:
-                    bits.append(
-                        f"brief names it {_esc(f.antecedent_name or '?')}; "
-                        f"the reporter shows {_esc(f.canonical_name or '?')}")
-                if f.quotation_result in ("altered", "not_found"):
-                    bits.append(f"quotation {_esc(f.quotation_result).replace('_', ' ')}")
-                rows += f"""<div class="cite-flag">
-  <p class="cite-head"><strong>{_esc(f.cite)}{pin}</strong>{_esc(where)} — {"; ".join(bits)}</p>
-  {f'<p class="cite-prop"><em>Brief states:</em> {_esc(f.proposition)}</p>' if f.proposition else ''}
-  {f'<p class="cite-quote"><em>Brief quotes:</em> &ldquo;{_esc(f.quotation)}&rdquo;</p>' if f.quotation else ''}
-  {f'<p class="cite-passage"><em>Authority says:</em> {_esc(f.retrieved_excerpt)}</p>' if f.retrieved_excerpt else ''}
-  {f'<p class="cite-reason">{_esc(f.reason)}</p>' if f.reason else ''}
+    elif review.findings:
+        rows = ""
+        for f in review.findings:
+            where = (f" (brief ¶ {f.brief_paragraph})" if f.brief_paragraph
+                     else "")
+            detail = ""
+            if f.quote:
+                detail += (f'<p class="cite-quote"><em>Brief quotes:</em> '
+                           f'&ldquo;{_esc(f.quote)}&rdquo;</p>')
+            if f.closest_text:
+                detail += (f'<p class="cite-passage"><em>Authority reads:</em> '
+                           f'{_esc(f.closest_text)}</p>')
+            if f.differences:
+                detail += (f'<p class="cite-diff"><em>Differences:</em> '
+                           f'{_esc(" ".join(f.differences[:12]))}</p>')
+            if not detail and f.context:
+                detail = (f'<p class="cite-prop"><em>In the brief:</em> '
+                          f'&hellip;{_esc(f.context[:280])}&hellip;</p>')
+            rows += f"""<div class="cite-flag">
+  <p class="cite-head"><strong>{_esc(f.headline)}</strong>{_esc(where)}</p>
+  {detail}
 </div>
 """
-            body = rows
-        else:
-            body = ('<p class="none">No citation was flagged. '
-                    'See the coverage line above for what was checked.</p>')
+        body = rows
+    else:
+        body = ('<p class="none">No citation was flagged. '
+                'See the coverage line above for what was checked.</p>')
 
+    count = len(review.findings) if review.ndlaw_available else 0
     return f"""
   <section class="results citation-review">
-    <h2>Citation Review ({len(review.flagged) if review.ndlaw_available else 0})</h2>
+    <h2>Citation Review ({count})</h2>
     <p class="advisory-banner">Advisory only — not part of the compliance
     determination. This section checks that each authority exists, that it is
     the case the brief names, and that quoted matter is accurate. It does
@@ -341,6 +341,7 @@ footer { text-align: center; color: #586069; font-size: 0.85rem; padding: 1.5rem
 }
 .cite-head { margin: 0 0 0.4em; }
 .cite-prop, .cite-quote, .cite-passage, .cite-reason { margin: 0.3em 0; font-size: 0.94em; }
+.cite-diff { color: #6b4a4a; font-family: ui-monospace, monospace; font-size: 0.88em; }
 .cite-passage { color: #333; background: #f6f6f8; padding: 0.4em 0.6em; border-radius: 3px; }
 .cite-reason { color: #555; font-style: italic; }
 """

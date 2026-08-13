@@ -122,10 +122,15 @@ The severity values must be lowercase: `"reject"`, `"correction"`, or `"note"`.
 #### Phase 2C: Citation Grounding (optional — requires ndlaw)
 
 This phase asks a different question from every other check: not whether the
-brief is *formatted* correctly, but whether the authorities it cites say what
-it says they say. It is **advisory chambers intel and never a filing defect** —
-nothing here may affect the Accept / Correction Letter / Reject recommendation,
-and `build_report.py` loads it only after the recommendation is fixed.
+brief is *formatted* correctly, but whether its authorities are accurately
+cited. It is **advisory chambers intel and never a filing defect** — nothing
+here may affect the Accept / Correction Letter / Reject recommendation, and
+`build_report.py` loads it only after the recommendation is fixed.
+
+Scope is **existence, case-name identity, and quotation accuracy**. Whether an
+authority supports the proposition it is cited for is out of scope: that needs
+the retrieved paragraph read against the argument, and a half-validated
+judgment reported as a finding is worse than no finding.
 
 **First, decide whether you can run it.** Check whether ndlaw research tools
 (`mcp__ndlaw__*` or an equivalent connector) are available in this session.
@@ -136,72 +141,59 @@ and `build_report.py` loads it only after the recommendation is fixed.
   reader assume the citations were checked and found sound.
 - **Available** — proceed.
 
-**1. Extract and scope.** Ask the script which citations are worth retrieving:
+**1. Clean the extracted text.** PDF extraction leaves page numbers on their own
+line, and they land inside quotations. Sent as-is, a correctly quoted brief
+comes back flagged as a misquotation over a stray numeral — this was observed,
+not hypothesised.
 
 ```bash
 $VENV_PYTHON -c "
-import sys, json; sys.path.insert(0, 'CORE_PARENT')
-from core.citations import extract_citations, select_for_grounding
-text = json.load(open('<intermediate-json-path>'))['full_text']
-scope = select_for_grounding(extract_citations(text))
-print(json.dumps(scope.to_dict(), indent=2))
+import sys, json; sys.path.insert(0, '<skill-dir>')
+from core.citations import clean_draft_text
+d = json.load(open('<intermediate-json-path>'))
+open('<pdf-stem>-draft.txt','w').write(clean_draft_text(d['full_text']))
 "
 ```
 
-Take the `coverage_line` verbatim — it accounts for every citation found,
-including the ones deliberately not checked.
+**2. Run one `check_draft` call** with the cleaned text:
 
-**2. Verify each selected authority.** Two questions, both answerable from the
-authority itself:
+```
+mcp__ndlaw__check_draft(draft_text=<cleaned text>, checks=["citations", "quotations"])
+```
 
-| Check | Tool | Records |
-|---|---|---|
-| Existence and identity | `verify_citation` (pass `expected_case_name`) | `exists`, `name_matches`, `name_similarity`, `canonical_name` |
-| Quotation | `verify_quotation` | `quotation_result`: `verbatim` / `altered` / `not_found` |
+Request only those two checks. Treatment and currency are different questions
+and are not part of this pass.
 
-**Pass the extracted strings exactly as the script emitted them.** Do not retype
-a quotation or a case name from reading the brief — a single invented word turns
-a sound citation into a reported misquotation, and the report is what a clerk
-acts on.
+Do not hand-verify citations one at a time instead. `check_draft` carries
+jetcite for extraction and the full corpus for lookup; a per-citation loop
+covers less and costs more. It also catches things a hand pass misses — on a
+real brief it found a parallel reporter cite that resolves to no ND opinion.
 
-A citation that does not resolve is a finding. A case name that barely resembles
-the canonical name is a finding: the authority exists, but it is not the one the
-brief names. A name that differs only in style is **not** — a brief citing
-"Davis o/b/o HJR & CER v. Romanyshyn" scores 0.667 against the reporter's
-"Davis, et al. v. Romanyshyn" and is correct. Record `name_similarity` and let
-`NAME_SIMILARITY_FLOOR` decide; do not flag on the boolean alone.
+**Never retype a quotation or case name into a tool call.** Pass the text as the
+script emitted it. A single invented word turns a sound citation into a reported
+misquotation, and the report is what a clerk acts on.
 
-**3. Do not assess proposition support.** Whether the cited passage actually
-supports what the brief says it supports is out of scope for now. Leave
-`support` unset. Retrieving a paragraph and judging it is a different and
-harder task, and a half-validated judgment reported as a finding is worse than
-no finding.
-
-**4. Write `<pdf-stem>-citations.json`:**
+**3. Save the raw `check_draft` payload** as `<pdf-stem>-citations.json`, adding
+two fields:
 
 ```json
 {
   "ndlaw_available": true,
-  "coverage_line": "Found 42 citation(s); 23 selected for verification; ...",
-  "findings": [
-    {
-      "cite": "2024 ND 88", "pinpoint": "9", "brief_paragraph": 12,
-      "antecedent_name": "Torgerson v. Bexley",
-      "proposition": "A district court's findings are reviewed de novo.",
-      "quotation": null,
-      "exists": "confirmed", "name_matches": true,
-      "quotation_result": null,
-      "support": "does_not_appear_to_support",
-      "retrieved_excerpt": "Findings of fact are reviewed under the clearly erroneous standard.",
-      "reason": "The cited paragraph states a clearly-erroneous standard, not de novo review."
-    }
-  ]
+  "brief_text": "<the cleaned draft text, so findings can be located by paragraph>",
+  "summary": { "...": "as returned by check_draft" },
+  "flags": [ "...as returned by check_draft..." ],
+  "unchecked": { "...": "as returned" }
 }
 ```
 
-Record every citation you checked, sound ones included — the report shows only
-the flagged ones but counts the rest. Then pass `--citations "<path>"` to
-`build_report.py` in Phase 3.
+`build_report.py` parses the payload directly. It reports only
+`misquotation`, `unresolved_case_cite`, and `case_name_drift` flags, and it
+**suppresses name-drift where the captions differ only by ndlaw's own
+bookkeeping** — "(Confidential)", "(cross-reference w/…)" — because those are
+correct citations, not discrepancies. Suppressed counts appear in the coverage
+line.
+
+Then pass `--citations "<path>"` to `build_report.py` in Phase 3.
 
 #### Phase 3: Build Report (Script)
 

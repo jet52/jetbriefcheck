@@ -74,20 +74,15 @@ pytest tests/
   classifier declines rather than guessing. When the type is UNKNOWN the 15 type-gated semantic checks
   plus PG-001/REC-001 report **not determined**, never "not applicable" — use `gated_check_result`
   (`semantic_definitions.py`), which both execution paths share.
-- **Citation grounding** (`core/citations.py`, SKILL.md Phase 2C): extraction and scoping are
-  deterministic and dependency-free; retrieval runs in the skill phase via ndlaw MCP and comes back as
-  `<stem>-citations.json`. **Advisory only** — findings are a `CitationReview` on `ComplianceReport`,
-  never `CheckResult`s, and `build_report.py` loads them only after the recommendation is fixed. Never
-  route them through `results`. When ndlaw is unavailable, write the file with
-  `"ndlaw_available": false` rather than skipping it.
-  Scope is **existence + case-name identity + quotation accuracy only**. Proposition support is out of
-  scope: the constants remain so the field can be filled later, but nothing sets them and `flagged` does
-  not consult them. Existence needs no pinpoint, so every ND authority is checked, deduped by
-  `_authority_key` (subsections are pinpoints into an authority, not separate authorities).
-- **Rule staleness is date-based on purpose.** `_check_rules_live()` compares scraped effective dates
-  only, so it does not catch a silent correction — text changed on ndcourts.gov without a new effective
-  date. That is deliberate, not a gap: detecting those is ndlaw's job, and the bundled rules under
-  `references/rules/` are refreshed periodically from it. Do not rebuild live text-diffing here.
+- **Citation grounding** (`core/citations.py`, SKILL.md Phase 2C): verification is ndlaw `check_draft`
+  with `checks=["citations","quotations"]` — it carries jetcite and the corpus, so do **not** rebuild
+  extraction or per-citation verification here; an earlier version did and missed findings check_draft
+  catches. This module only does what check_draft cannot know it needs: `clean_draft_text` (page numbers
+  extraction leaves inside quotations → false misquotation flags), `name_drift_is_real` (ndlaw captions
+  carry bookkeeping like "(Confidential)" / "(cross-reference w/…)"; comparing raw scores a correct
+  "Lucas v. Lucas" at 0.491), and paragraph attribution. Scope is existence + identity + quotation only.
+  **Advisory** — a `CitationReview` on `ComplianceReport`, never `CheckResult`s, loaded after the
+  recommendation is fixed. When ndlaw is absent, write `"ndlaw_available": false`, never skip the file.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content

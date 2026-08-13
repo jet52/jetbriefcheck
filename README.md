@@ -126,13 +126,11 @@ The HTML report has several sections:
   - **Correction Required** — problems that should be fixed but don't rise to rejection level (e.g., margin too narrow, missing paragraph numbering).
   - **Advisory Notes** — minor issues or observations (e.g., oral argument notation not found, font style question).
 
-- **Citation Review** *(when the ndlaw research tools are available)* — a separate, advisory section that checks each authority the brief cites: **does it exist, is it the case the brief names, and is the quoted matter accurate**. It does *not* assess whether an authority supports the proposition it is cited for — that judgment is out of scope for now and is left to chambers.
+- **Citation Review** *(when the ndlaw research tools are available)* — a separate, advisory section checking that each authority the brief cites **exists, is the case the brief names, and is quoted accurately**. It does *not* assess whether an authority supports the proposition it is cited for; that judgment is out of scope and is left to chambers.
+
+  The verification is ndlaw's `check_draft`, which carries the citation parser and the North Dakota corpus. JetBriefCheck adds what `check_draft` cannot know — that it is reading a PDF extraction of a brief. It strips the page numbers extraction leaves inside quotations (which would otherwise report a correctly quoted brief as a misquotation), locates each finding by brief paragraph, and suppresses case-name differences that are only the reporter's own bookkeeping. A brief citing "Lucas v. Lucas" against a canonical caption of "Lucas v. Lucas (cross-reference w/20990001)" is correct; flagging it would be a false alarm on good work. Suppressed counts appear in the coverage line rather than vanishing.
 
   **It is not part of the compliance determination.** Nothing in it affects Accept / Correction Letter / Reject; the recommendation is computed before the section is loaded.
-
-  The section opens with a coverage line accounting for every citation found, including those not checked (authority outside North Dakota, repeat citations of an authority already verified, anything past the lookup cap). Unchecked never reads as confirmed. Each flag shows the citation, what the brief says, the retrieved text, and a one-line reason.
-
-  A case name that differs from the reporter's only in style is not flagged — a brief citing "Davis o/b/o HJR & CER v. Romanyshyn" against the canonical "Davis, et al. v. Romanyshyn" is correct, and flagging it would be a false alarm on good work.
 
   When ndlaw is unavailable the section still appears and says no citation was verified, rather than vanishing and leaving the impression the citations were checked and found sound.
 
