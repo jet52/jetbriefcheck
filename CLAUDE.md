@@ -66,6 +66,12 @@ pytest tests/
   or unparseable/absent from the API response on the other. Never reintroduce a
   `passed=True` fallback for unevaluated checks; the "Passed Checks" list must not contain
   fiction.
+- **Brief-type classification** (`brief_classifier.py`): a cover names the trial-court role first and the
+  appellate role last, so a compound designation resolves on its **trailing** role (`_designation_role`);
+  "respondent - appellant" is an appellant brief. The "brief of X" window takes no closing delimiter —
+  `_normalize` collapses newlines, so requiring one silently failed on plain "BRIEF OF APPELLANT".
+  `UNKNOWN` is a real outcome, not a bug: the caption names both parties, so with no title line the
+  classifier declines rather than guessing. Note UNKNOWN skips the page limit and 15 type-gated checks.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from typing import Optional
 
 from core.models import BriefMetadata, BriefType
 
@@ -145,6 +146,72 @@ def _p_reply() -> str:
     return rf"rep{_IL}[yi1!|]"
 
 
+def _p_plaintiff() -> str:
+    """Regex fragment matching 'plaintiff(s)' loosely."""
+    return rf"p{_IL}a{_IL}nt{_IL}ffs?"
+
+
+def _p_defendant() -> str:
+    """Regex fragment matching 'defendant(s)' loosely."""
+    return r"defendants?"
+
+
+def _p_intervenor() -> str:
+    """Regex fragment matching 'intervenor(s)' / 'intervener(s)' loosely."""
+    return rf"{_IL}nterven[oae]rs?"
+
+
+# Party-role words and the brief type each implies.  Trial-court roles imply
+# nothing about who is appealing, so they map to None: they anchor a compound
+# designation without deciding it.
+_ROLE_PATTERNS: list[tuple[str, Optional[BriefType]]] = [
+    (_p_appellee(), BriefType.APPELLEE),
+    (_p_appellant(), BriefType.APPELLANT),
+    (_p_respondent(), BriefType.APPELLEE),
+    (_p_petitioner(), BriefType.APPELLANT),
+    (_p_plaintiff(), None),
+    (_p_defendant(), None),
+    (_p_intervenor(), None),
+]
+
+# What may join the parts of one designation: a hyphen, slash, dash, or a
+# space or two.  Anything longer has left the designation and entered prose.
+_DESIGNATION_JOINER = r"[-/\s]{1,3}"
+
+
+def _designation_role(window: str) -> Optional[BriefType]:
+    """Resolve the first party designation in *window* to a brief type.
+
+    A cover names the parties by their trial-court role and their appellate
+    role together — "plaintiff-appellant", "respondent - appellant",
+    "defendant/appellee".  **The appellate role comes last**, so the trailing
+    role governs.  Reading left to right instead resolves
+    "respondent - appellant" to appellee, because "respondent" is an
+    appellee-side word; that inversion misclassified real briefs.
+
+    Only the *first* cluster of adjacent role words counts.  In "brief of
+    appellant in response to appellee", the words are not adjacent, so the
+    designation ends at "appellant" and the later mention is ignored.
+    """
+    hits: list[tuple[int, int, Optional[BriefType]]] = []
+    for pattern, brief_type in _ROLE_PATTERNS:
+        for match in re.finditer(pattern, window):
+            hits.append((match.start(), match.end(), brief_type))
+    if not hits:
+        return None
+    hits.sort()
+
+    cluster = [hits[0]]
+    for hit in hits[1:]:
+        gap = window[cluster[-1][1]:hit[0]]
+        if not re.fullmatch(_DESIGNATION_JOINER, gap):
+            break
+        cluster.append(hit)
+
+    roles = [bt for _, _, bt in cluster if bt is not None]
+    return roles[-1] if roles else None
+
+
 # ---------------------------------------------------------------------------
 # Pass 0: Match "petition for rehearing"
 # ---------------------------------------------------------------------------
@@ -207,31 +274,33 @@ def _match_brief_phrase(text: str) -> BriefType:
     if re.search(rf"{_BR}.{{0,15}}cross[- ]?app?e[il1!|]{1,2}[ae]", text):
         return BriefType.CROSS_APPEAL
 
-    # For appellant/appellee, we must be careful: covers list BOTH parties.
-    # Strategy: find "brief" and look at what's immediately adjacent.
-    # Handles compound designations like "defendant-appellant" or "plaintiff-appellee".
+    # For appellant/appellee, covers name BOTH parties, so resolve the
+    # designation attached to "brief" rather than any label on the page.
+    #
+    # The window is taken without requiring a delimiter to close it.  It used
+    # to end at a comma, a newline, or a double space — but _normalize()
+    # collapses all whitespace to single spaces before this runs, so on a
+    # cover reading "BRIEF OF APPELLANT / APPEAL FROM THE JUDGMENT..." nothing
+    # closed the window and the match failed outright. That silently sent the
+    # most common cover format in test-data/ to the fallback.
 
-    # "brief of ..." direction — grab a few words after "brief of (the)"
-    m = re.search(rf"{_BR}\s+of\s+(the\s+)?(.{{1,40}}?)(?:\s*[,\n]|\s{{2,}}|$)", text)
+    # "brief of ..." direction
+    m = re.search(rf"{_BR}\s+of\s+(?:the\s+)?(.{{1,60}})", text)
     if m:
-        after = m.group(2)
+        after = m.group(1)
         # Cross-appeal takes priority (compound: "cross-appellant and appellee")
         if re.search(r"cross[- ]?app?e[il1!|]{1,2}[ae]", after):
             return BriefType.CROSS_APPEAL
-        # Check for appellee/respondent first (more specific than appellant)
-        if re.search(_p_appellee(), after) or re.search(_p_respondent(), after):
-            return BriefType.APPELLEE
-        if re.search(_p_appellant(), after) or re.search(_p_petitioner(), after):
-            return BriefType.APPELLANT
+        role = _designation_role(after)
+        if role is not None:
+            return role
 
-    # "X brief" direction — grab compound words before "brief"
-    m = re.search(rf"(\S+(?:-\S+)*)\s+{_BR}", text)
+    # "X brief" direction — e.g. "APPELLANT'S BRIEF"
+    m = re.search(rf"([\w'-]+(?:[-/][\w'-]+)*)\s+{_BR}", text)
     if m:
-        before = m.group(1)
-        if re.search(_p_appellee(), before) or re.search(_p_respondent(), before):
-            return BriefType.APPELLEE
-        if re.search(_p_appellant(), before) or re.search(_p_petitioner(), before):
-            return BriefType.APPELLANT
+        role = _designation_role(m.group(1))
+        if role is not None:
+            return role
 
     return BriefType.UNKNOWN
 
