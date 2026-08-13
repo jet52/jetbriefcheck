@@ -217,22 +217,62 @@ class TestGroundingScope:
         assert len(scope.unverifiable) == 1
         assert not scope.selected
 
-    def test_pinpoint_or_quotation_selects(self):
+    def test_every_nd_authority_is_selected(self):
+        """Existence needs no pinpoint, so nothing is skipped for lacking one."""
         scope = select_for_grounding([
-            self._cite(pinpoint="9", start=1),
-            self._cite(quotation="some quoted matter", start=2),
+            Citation(raw="a", kind=ND_CASE, start=1, end=2, normalized="2024 ND 1"),
+            Citation(raw="b", kind=ND_CASE, start=3, end=4, normalized="2024 ND 2",
+                     quotation="some quoted matter"),
         ])
         assert len(scope.selected) == 2
+        assert len(scope.quotations) == 1
 
-    def test_bare_cite_is_low_value(self):
+    def test_bare_cite_is_still_checked(self):
+        """Existence needs no pinpoint, so a bare cite is worth verifying."""
         scope = select_for_grounding([self._cite()])
-        assert len(scope.low_value) == 1
-        assert not scope.selected
+        assert len(scope.selected) == 1
 
-    def test_quotations_outrank_pinpoints_under_the_cap(self):
-        """A misquotation is the sharpest finding, so it must survive the cap."""
-        cites = [self._cite(pinpoint="9", start=i) for i in range(DEFAULT_LOOKUP_CAP)]
-        cites.append(self._cite(quotation="quoted matter here", start=999))
+    def test_repeat_citation_of_one_authority_is_deduped(self):
+        """Existence is a property of the authority, not the occurrence."""
+        scope = select_for_grounding([
+            Citation(raw="2024 ND 88", kind=ND_CASE, start=1, end=2,
+                     normalized="2024 ND 88"),
+            Citation(raw="2024 ND 88", kind=ND_CASE, start=9, end=10,
+                     normalized="2024 ND 88"),
+        ])
+        assert len(scope.selected) == 1
+        assert len(scope.duplicate) == 1
+        assert scope.total == 2
+
+    def test_repeat_citation_carrying_its_own_quotation_is_still_verified(self):
+        """The authority is checked once; each quotation is checked separately."""
+        scope = select_for_grounding([
+            Citation(raw="2024 ND 88", kind=ND_CASE, start=1, end=2,
+                     normalized="2024 ND 88"),
+            Citation(raw="2024 ND 88", kind=ND_CASE, start=9, end=10,
+                     normalized="2024 ND 88", quotation="a quoted passage here"),
+        ])
+        assert len(scope.selected) == 1, "one authority, one existence check"
+        assert len(scope.quotations) == 1, "the quotation is still verified"
+        assert scope.total == 2
+
+    def test_subsection_does_not_split_an_authority(self):
+        """"N.D.R.Ev. 201" and "201(b)" are one rule, not two."""
+        scope = select_for_grounding([
+            Citation(raw="a", kind=ND_RULE, start=1, end=2, normalized="N.D.R.Ev. 201"),
+            Citation(raw="b", kind=ND_RULE, start=5, end=6,
+                     normalized="N.D.R.Ev. 201(b)", pinpoint="(b)"),
+        ])
+        assert len(scope.selected) == 1
+        assert len(scope.duplicate) == 1
+
+    def test_quotations_outrank_bare_cites_under_the_cap(self):
+        """A misquotation is the sharper finding, so it must survive the cap."""
+        cites = [Citation(raw=f"c{i}", kind=ND_CASE, start=i, end=i + 1,
+                          normalized=f"20{i:02d} ND {i}")
+                 for i in range(DEFAULT_LOOKUP_CAP)]
+        cites.append(Citation(raw="q", kind=ND_CASE, start=999, end=1000,
+                              normalized="2099 ND 99", quotation="quoted matter here"))
         scope = select_for_grounding(cites)
         assert any(c.quotation for c in scope.selected)
         assert len(scope.selected) == DEFAULT_LOOKUP_CAP
@@ -246,7 +286,9 @@ class TestGroundingScope:
         assert scope.total == 3
 
     def test_cap_excess_is_reported_not_dropped(self):
-        cites = [self._cite(pinpoint="9", start=i) for i in range(DEFAULT_LOOKUP_CAP + 5)]
+        cites = [Citation(raw=f"c{i}", kind=ND_CASE, start=i, end=i + 1,
+                          normalized=f"20{i:02d} ND {i}")
+                 for i in range(DEFAULT_LOOKUP_CAP + 5)]
         scope = select_for_grounding(cites)
         assert len(scope.selected) == DEFAULT_LOOKUP_CAP
         assert len(scope.over_cap) == 5
@@ -296,8 +338,6 @@ class TestFindingFlags:
         {"name_matches": False},
         {"quotation_result": QUOTE_ALTERED},
         {"quotation_result": QUOTE_NOT_FOUND},
-        {"support": PARTIALLY_SUPPORTS},
-        {"support": DOES_NOT_SUPPORT},
     ])
     def test_defects_are_flagged(self, kwargs):
         assert CitationFinding(cite="x", **kwargs).flagged is True
@@ -312,6 +352,12 @@ class TestFindingFlags:
         """A failed lookup is not evidence against the brief."""
         f = CitationFinding(cite="x", exists=EXISTS_CONFIRMED,
                             support=COULD_NOT_RETRIEVE)
+        assert f.flagged is False
+
+    @pytest.mark.parametrize("support", [PARTIALLY_SUPPORTS, DOES_NOT_SUPPORT])
+    def test_support_is_out_of_scope_and_never_flags(self, support):
+        """Nothing populates `support`; it must not gate anything either."""
+        f = CitationFinding(cite="x", exists=EXISTS_CONFIRMED, support=support)
         assert f.flagged is False
 
     def test_verbatim_quotation_is_not_flagged(self):
@@ -365,7 +411,7 @@ class TestAdvisoryFirewall:
     def test_report_keeps_the_review_out_of_results(self):
         from core.models import BriefType, ComplianceReport, Recommendation
         review = CitationReview(findings=[
-            CitationFinding(cite="2024 ND 88", support=DOES_NOT_SUPPORT)])
+            CitationFinding(cite="2024 ND 88", quotation_result=QUOTE_ALTERED)])
         report = ComplianceReport(
             brief_type=BriefType.APPELLANT,
             recommendation=Recommendation.ACCEPT,
@@ -390,14 +436,16 @@ class TestAdvisoryFirewall:
         from core.report_builder import build_html_report
         review = CitationReview(
             coverage_line="Found 1 citation(s); 1 selected for verification.",
-            findings=[CitationFinding(cite="2024 ND 88", support=DOES_NOT_SUPPORT,
-                                      reason="passage is about a different question")])
+            findings=[CitationFinding(cite="2024 ND 88", quotation_result=QUOTE_ALTERED,
+                                      reason="wording differs from the opinion")])
         html = build_html_report(ComplianceReport(
             brief_type=BriefType.APPELLANT, recommendation=Recommendation.ACCEPT,
             citation_review=review))
         assert "Citation Review" in html
         assert "not part of the compliance" in html
-        assert "does not appear to support" in html
+        # whitespace-independent: the banner wraps mid-sentence
+        flat = " ".join(html.split())
+        assert "does <strong>not</strong> assess whether an authority supports" in flat
 
     def test_unavailable_review_still_renders_a_section(self):
         from core.models import BriefType, ComplianceReport, Recommendation

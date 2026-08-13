@@ -151,29 +151,31 @@ print(json.dumps(scope.to_dict(), indent=2))
 Take the `coverage_line` verbatim — it accounts for every citation found,
 including the ones deliberately not checked.
 
-**2. Verify each selected citation, cheapest check first.** Stop early when a
-step settles the matter.
+**2. Verify each selected authority.** Two questions, both answerable from the
+authority itself:
 
-| Step | Tool | Records |
+| Check | Tool | Records |
 |---|---|---|
-| Existence | `verify_citation` | `exists`, and `name_matches` against `antecedent_name` |
+| Existence and identity | `verify_citation` (pass `expected_case_name`) | `exists`, `name_matches`, `name_similarity`, `canonical_name` |
 | Quotation | `verify_quotation` | `quotation_result`: `verbatim` / `altered` / `not_found` |
-| Support | `get_pinpoint` (cases), `lookup_authority` (statutes/rules) | `support`, `retrieved_excerpt` |
 
-A wrong case name on a real citation is a finding: the authority exists, but
-it is not the one the brief names. A cite to a statutory subsection that does
-not exist is likewise a finding.
+**Pass the extracted strings exactly as the script emitted them.** Do not retype
+a quotation or a case name from reading the brief — a single invented word turns
+a sound citation into a reported misquotation, and the report is what a clerk
+acts on.
 
-**3. Judge proposition support against the retrieved text, not memory.**
-Retrieve the whole paragraph — a snippet invites reading support into it.
-Classify as `supports`, `partially_supports`, `does_not_appear_to_support`, or
-`could_not_retrieve`.
+A citation that does not resolve is a finding. A case name that barely resembles
+the canonical name is a finding: the authority exists, but it is not the one the
+brief names. A name that differs only in style is **not** — a brief citing
+"Davis o/b/o HJR & CER v. Romanyshyn" scores 0.667 against the reporter's
+"Davis, et al. v. Romanyshyn" and is correct. Record `name_similarity` and let
+`NAME_SIMILARITY_FLOOR` decide; do not flag on the boolean alone.
 
-Partial support is the common and the hard case: a pinpoint that backs half of
-a compound proposition. **Borderline calls go to `partially_supports` with the
-excerpt shown, never silently to `supports`.** If retrieval fails, record
-`could_not_retrieve` — never infer the answer from the case name or your own
-recollection of the authority.
+**3. Do not assess proposition support.** Whether the cited passage actually
+supports what the brief says it supports is out of scope for now. Leave
+`support` unset. Retrieving a paragraph and judging it is a different and
+harder task, and a half-validated judgment reported as a finding is worse than
+no finding.
 
 **4. Write `<pdf-stem>-citations.json`:**
 

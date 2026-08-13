@@ -80,6 +80,10 @@ pytest tests/
   never `CheckResult`s, and `build_report.py` loads them only after the recommendation is fixed. Never
   route them through `results`. When ndlaw is unavailable, write the file with
   `"ndlaw_available": false` rather than skipping it.
+  Scope is **existence + case-name identity + quotation accuracy only**. Proposition support is out of
+  scope: the constants remain so the field can be filled later, but nothing sets them and `flagged` does
+  not consult them. Existence needs no pinpoint, so every ND authority is checked, deduped by
+  `_authority_key` (subsections are pinpoints into an authority, not separate authorities).
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content

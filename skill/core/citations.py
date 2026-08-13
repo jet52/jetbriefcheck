@@ -330,6 +330,16 @@ def _clean_quote(raw: str) -> str:
     return _normalize_space(_STRAY_PAGE_NUM_RE.sub(" ", _normalize_space(raw)))
 
 
+# Words that only appear in a brief's section headings, never inside a case
+# name.  Used to stop an antecedent-name walk from crossing a heading.
+_HEADING_WORDS = {
+    "TABLE", "TABLES", "AUTHORITIES", "CONTENTS", "CASES", "STATUTES",
+    "RULES", "ARGUMENT", "STATEMENT", "CONCLUSION", "INTRODUCTION", "FACTS",
+    "ISSUES", "APPENDIX", "ADDENDUM", "CERTIFICATE", "COMPLIANCE", "SERVICE",
+    "JURISDICTION", "SUMMARY", "SECONDARY", "OTHER",
+}
+
+
 def _antecedent_name(text: str, start: int) -> Optional[str]:
     """The case name immediately before a citation, if any."""
     window = text[max(0, start - 200):start]
@@ -337,6 +347,23 @@ def _antecedent_name(text: str, start: int) -> Optional[str]:
     if not m:
         return None
     name = _normalize_space(m.group("name"))
+    # A brief's section headings read as runs of capitalised words, so the
+    # walk left can cross out of the sentence and into "TABLE OF AUTHORITIES
+    # Cases Davis o/b/o ... v. Romanyshyn".  Cut after the last heading word.
+    #
+    # Detecting headings by capitalisation alone does not work: party initials
+    # are legitimately capitalised too, and "HJR & CER" would be mistaken for
+    # shouting and the real name discarded.  Match a heading vocabulary.
+    tokens = name.split()
+    last_heading = max(
+        (i for i, tok in enumerate(tokens)
+         if tok.strip(".,:").upper() in _HEADING_WORDS),
+        default=None,
+    )
+    if last_heading is not None:
+        name = " ".join(tokens[last_heading + 1:])
+    if " v" not in name.lower():
+        return None
     # Guard against swallowing a lead-in verb or signal
     name = re.sub(
         r"^(?:see(?:\s+(?:also|generally))?|accord|cf\.?|e\.?g\.?|but\s+see|citing|"
@@ -458,33 +485,44 @@ class GroundingScope:
     adds up and "not checked" never reads as "checked and sound".
     """
 
-    selected: list[Citation] = field(default_factory=list)
-    unverifiable: list[Citation] = field(default_factory=list)   # outside ndlaw
-    low_value: list[Citation] = field(default_factory=list)      # no pinpoint, no quote
-    over_cap: list[Citation] = field(default_factory=list)       # excluded by the cap
+    selected: list[Citation] = field(default_factory=list)        # distinct authorities
+    quotations: list[Citation] = field(default_factory=list)      # occurrences with quotes
+    unverifiable: list[Citation] = field(default_factory=list)    # outside ndlaw
+    duplicate: list[Citation] = field(default_factory=list)       # same authority again
+    over_cap: list[Citation] = field(default_factory=list)        # excluded by the cap
 
     @property
     def total(self) -> int:
         return (len(self.selected) + len(self.unverifiable)
-                + len(self.low_value) + len(self.over_cap))
+                + len(self.duplicate) + len(self.over_cap))
 
     def coverage_line(self) -> str:
         """One sentence stating what was attempted, before any findings."""
-        parts = [f"Found {self.total} citation(s); "
-                 f"{len(self.selected)} selected for verification"]
+        authorities = len(self.selected)
+        quotes = len(self.quotations)
+        parts = [
+            f"Found {self.total} citation(s) to "
+            f"{authorities + len(self.over_cap)} distinct "
+            f"authorit{'y' if authorities + len(self.over_cap) == 1 else 'ies'}; "
+            f"{authorities} checked for existence and case name"
+        ]
+        if quotes:
+            parts.append(f"{quotes} quotation(s) checked against the opinion text")
+        if self.duplicate:
+            parts.append(
+                f"{len(self.duplicate)} repeat citation(s) covered by the check "
+                f"of the same authority")
         if self.unverifiable:
             parts.append(
                 f"{len(self.unverifiable)} outside North Dakota authority and "
                 f"not checked")
-        if self.low_value:
-            parts.append(
-                f"{len(self.low_value)} cited without a pinpoint or quotation "
-                f"and not checked")
         if self.over_cap:
             parts.append(
-                f"{len(self.over_cap)} beyond the {DEFAULT_LOOKUP_CAP}-citation "
+                f"{len(self.over_cap)} beyond the {DEFAULT_LOOKUP_CAP}-authority "
                 f"cap and not checked")
-        return "; ".join(parts) + ". Unchecked citations are unverified, not confirmed."
+        return ("; ".join(parts) + ". Whether an authority supports the proposition "
+                "it is cited for was not assessed. Unchecked citations are "
+                "unverified, not confirmed.")
 
     def to_dict(self) -> dict:
         return {
@@ -493,44 +531,64 @@ class GroundingScope:
             "selected": [c.to_dict() for c in self.selected],
             "excluded": {
                 "unverifiable": [c.to_dict() for c in self.unverifiable],
-                "low_value": [c.to_dict() for c in self.low_value],
+                "duplicate": [c.to_dict() for c in self.duplicate],
                 "over_cap": [c.to_dict() for c in self.over_cap],
             },
         }
+
+
+def _authority_key(cite: Citation) -> str:
+    """Identity of the authority a citation points to.
+
+    A subsection is a pinpoint into an authority, not a separate one:
+    "N.D.R.Ev. 201" and "N.D.R.Ev. 201(b)" are the same rule, and checking
+    both would spend two lookups to answer one question.
+    """
+    return re.sub(r"\([^)]*\)", "", cite.normalized).strip().lower()
 
 
 def select_for_grounding(
     citations: list[Citation],
     cap: int = DEFAULT_LOOKUP_CAP,
 ) -> GroundingScope:
-    """Choose which citations are worth retrieving.
+    """Choose which citations to verify.
 
-    Three rules, in order:
+    The pass asks two questions, neither of which needs a pinpoint:
 
-    * An authority outside ndlaw's reach cannot be verified here at all.
-    * A citation carrying a pinpoint or quoted matter can be tested against
-      the text it points to.  One without either supports a proposition only
-      generally — a string cite — and retrieving it proves little.
-    * Beyond the cap, nothing more is attempted.
+    * Does this authority exist, and is it the case the brief names?
+    * Is the quoted matter accurate?
 
-    Quoted matter is never dropped for want of a pinpoint: a misquotation is
-    checkable on its own, and it is the failure mode with the sharpest
-    consequences.
+    So every North Dakota authority is worth checking, not only those cited
+    with a pinpoint.  Existence is a property of the authority rather than of
+    the occurrence, so repeat citations of the same case ride on the first
+    check — but an occurrence carrying its own quotation is kept, because a
+    second quotation from the same case is a second thing to verify.
+
+    Authority outside ndlaw's reach cannot be checked here at all, and beyond
+    the cap nothing further is attempted.  Both are reported.
     """
     scope = GroundingScope()
+    seen: set[str] = set()
     ranked: list[Citation] = []
 
     for cite in citations:
         if not cite.verifiable:
             scope.unverifiable.append(cite)
-        elif cite.quotation or cite.pinpoint:
-            ranked.append(cite)
-        else:
-            scope.low_value.append(cite)
+            continue
+        # Each occurrence carrying quoted matter is its own thing to verify,
+        # even when the authority has already been seen.
+        if cite.quotation:
+            scope.quotations.append(cite)
+        key = _authority_key(cite)
+        if key in seen:
+            scope.duplicate.append(cite)
+            continue
+        seen.add(key)
+        ranked.append(cite)
 
-    # Quotations first — a misquotation is the sharpest finding, so it should
-    # survive the cap when a bare pinpoint would not.
-    ranked.sort(key=lambda c: (c.quotation is None, c.pinpoint is None, c.start))
+    # Authorities carrying a quotation first: a misquotation is the sharper
+    # finding, so it should survive the cap ahead of a bare existence check.
+    ranked.sort(key=lambda c: (c.quotation is None, c.start))
     scope.selected = ranked[:cap]
     scope.over_cap = ranked[cap:]
     return scope
@@ -543,6 +601,13 @@ EXISTS_CONFIRMED = "confirmed"
 EXISTS_NOT_FOUND = "not_found"
 UNCHECKED = "unchecked"
 
+# Whether a passage actually supports the proposition it is cited for is
+# deliberately OUT OF SCOPE.  That judgment needs the retrieved paragraph read
+# against the brief's argument, and its hard case — partial support — has not
+# been validated against real briefs.  The constants stay so the field can be
+# populated later without a schema change, but nothing sets them and nothing
+# flags on them: the pass answers only "does this authority exist, is it the
+# case the brief names, and is the quotation accurate".
 SUPPORTS = "supports"
 PARTIALLY_SUPPORTS = "partially_supports"
 DOES_NOT_SUPPORT = "does_not_appear_to_support"
@@ -565,7 +630,6 @@ QUOTE_NOT_FOUND = "not_found"
 # openly unchecked, and neither needs a per-citation entry in the report.
 _FLAGGED_EXISTENCE = {EXISTS_NOT_FOUND}
 _FLAGGED_QUOTATION = {QUOTE_ALTERED, QUOTE_NOT_FOUND}
-_FLAGGED_SUPPORT = {PARTIALLY_SUPPORTS, DOES_NOT_SUPPORT}
 
 
 @dataclass
@@ -607,12 +671,14 @@ class CitationFinding:
         A wrong case name on a real citation counts: the authority exists,
         but it is not the one the brief says it is.  A merely stylistic
         difference in the name does not — see NAME_SIMILARITY_FLOOR.
+
+        Proposition support is not consulted: it is out of scope, and a
+        classification nothing produces must not silently gate anything.
         """
         return (
             self.exists in _FLAGGED_EXISTENCE
             or self.name_drifted
             or self.quotation_result in _FLAGGED_QUOTATION
-            or self.support in _FLAGGED_SUPPORT
         )
 
     @classmethod

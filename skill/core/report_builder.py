@@ -180,11 +180,9 @@ def _render_citation_review(report: ComplianceReport) -> str:
                         f"the reporter shows {_esc(f.canonical_name or '?')}")
                 if f.quotation_result in ("altered", "not_found"):
                     bits.append(f"quotation {_esc(f.quotation_result).replace('_', ' ')}")
-                if f.support in ("partially_supports", "does_not_appear_to_support"):
-                    bits.append(_esc(f.support).replace("_", " "))
                 rows += f"""<div class="cite-flag">
   <p class="cite-head"><strong>{_esc(f.cite)}{pin}</strong>{_esc(where)} — {"; ".join(bits)}</p>
-  <p class="cite-prop"><em>Brief states:</em> {_esc(f.proposition)}</p>
+  {f'<p class="cite-prop"><em>Brief states:</em> {_esc(f.proposition)}</p>' if f.proposition else ''}
   {f'<p class="cite-quote"><em>Brief quotes:</em> &ldquo;{_esc(f.quotation)}&rdquo;</p>' if f.quotation else ''}
   {f'<p class="cite-passage"><em>Authority says:</em> {_esc(f.retrieved_excerpt)}</p>' if f.retrieved_excerpt else ''}
   {f'<p class="cite-reason">{_esc(f.reason)}</p>' if f.reason else ''}
@@ -199,9 +197,11 @@ def _render_citation_review(report: ComplianceReport) -> str:
   <section class="results citation-review">
     <h2>Citation Review ({len(review.flagged) if review.ndlaw_available else 0})</h2>
     <p class="advisory-banner">Advisory only — not part of the compliance
-    determination. Whether an authority supports the proposition it is cited
-    for is a question for chambers, not a defect in the filing, and nothing in
-    this section affects the recommended action above.</p>
+    determination. This section checks that each authority exists, that it is
+    the case the brief names, and that quoted matter is accurate. It does
+    <strong>not</strong> assess whether an authority supports the proposition
+    it is cited for — that judgment is for chambers. Nothing here affects the
+    recommended action above.</p>
     <p class="coverage">{_esc(review.coverage_line)}</p>
     {body}
   </section>"""
