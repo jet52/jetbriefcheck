@@ -46,7 +46,7 @@ pytest tests/
 - Optional Anthropic API key for AI-enhanced analysis
 - Measurement pitfalls (see README "Known measurement pitfalls" for detail):
   - **FMT-006 font size** — splits document-wide undersize (predominant size itself below 12pt) from scattered spans; leading/font ratio rules *out* page scaling but cannot prove it (see `_explain_document_wide_undersize`). Headers/footers/superscripts/small caps are categorized and downgraded already
-  - **FMT-009 line spacing** — measured across split blocks since v1.6.0; failures are usually real. Reports measurement coverage, and returns **undetermined** below `MIN_SPACING_COVERAGE_PCT` (50%) instead of the old "assumed compliant"
+  - **FMT-009 line spacing** — measured across split blocks since v1.6.0; failures are usually real. Reports measurement coverage, and returns **undetermined** below `MIN_SPACING_COVERAGE_PCT` (50%) instead of the old "assumed compliant". Also counts single-spaced runs (`_find_single_spaced_runs`) and reports them **without scoring** — Rule 32(a)(5) permits single-spaced headings and quotations, so a run is evidence, not a finding; never wire these into the verdict
   - **FMT-005 / FMT-011 / FMT-012** — share one page-number footer recognizer (`_page_number_value` in `pdf_extract.py`), but two zones: `_MARGIN_FOOTER_ZONE` (0.90) for what may sit inside the bottom margin, `_PAGE_NUMBER_ZONE` (0.85) for what counts as numbering. FMT-011/012 report **undetermined** (`applicable=False`, so it cannot drive the recommendation) when the footer holds an image or unreadable text — never "unnumbered"
 - **Two execution paths for semantic checks — don't conflate them.**
   - *Skill path* (how it runs under a Claude subscription): SKILL.md has Claude evaluate the

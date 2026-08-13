@@ -18,6 +18,8 @@ from core.constants import (
     MIN_BOTTOM_MARGIN,
     MIN_DOUBLE_SPACE_PTS,
     MIN_SPACING_COVERAGE_PCT,
+    SUBSTANTIAL_RUN_LINES,
+    MIN_REPORTABLE_RUN_LINES,
     MIN_FONT_SIZE_PT,
     MIN_LEFT_MARGIN,
     MIN_RIGHT_MARGIN,
@@ -555,6 +557,44 @@ def _check_font_style(metadata: BriefMetadata) -> str:
     return ""
 
 
+def _single_spaced_runs_note(metadata: BriefMetadata) -> str:
+    """Describe single-spaced passages without judging them.
+
+    Rule 32(a)(5) permits headings and quotations to be single-spaced, so a
+    run is evidence, not a violation — and nothing in the geometry tells a
+    permitted run from a defective one.  The median verdict above already
+    catches a brief that is single-spaced throughout; this locates the
+    isolated blocks it cannot see, and leaves the call to the reader.
+    """
+    # Skip the cover, as the median does: a caption block and an attorney
+    # block are single-spaced by convention and say nothing about the brief.
+    runs = [
+        (p.page_number + 1, n)
+        for p in metadata.pages[1:]
+        for n in p.single_spaced_runs
+    ]
+    if not runs:
+        return ""
+
+    longest_page, longest = max(runs, key=lambda r: r[1])
+    substantial = sorted({pg for pg, n in runs if n >= SUBSTANTIAL_RUN_LINES})
+
+    note = (
+        f"Single-spaced passages of {MIN_REPORTABLE_RUN_LINES}+ lines: "
+        f"{len(runs)} (longest {longest} lines, page {longest_page}). "
+        f"Rule 32(a)(5) permits headings and quotations to be single-spaced, "
+        f"so these are reported for review, not counted as violations."
+    )
+    if substantial:
+        shown = ", ".join(str(p) for p in substantial[:8])
+        more = f" (and {len(substantial) - 8} more)" if len(substantial) > 8 else ""
+        note += (
+            f" Passages of {SUBSTANTIAL_RUN_LINES}+ lines — longer than a "
+            f"typical block quotation — appear on pages {shown}{more}."
+        )
+    return note
+
+
 def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
     """FMT-009: Text is double-spaced.
 
@@ -589,6 +629,7 @@ def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
         f"Line spacing was measurable on {len(spacings)} of "
         f"{len(body_pages)} body pages ({coverage:.0f}%)."
     )
+    runs_note = _single_spaced_runs_note(metadata)
 
     if not spacings:
         return CheckResult(
@@ -609,10 +650,11 @@ def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
                 f"Could not determine line spacing; measured on only "
                 f"{len(spacings)} of {len(body_pages)} body pages."
             ),
-            details=f"{coverage_note} The median of those pages is "
-                    f"{median:.1f}pt, but too few pages were measurable to "
-                    f"rely on it — a single-spaced brief can pass on a small "
-                    f"sample. Check by eye.",
+            details=" ".join(filter(None, [
+                f"{coverage_note} The median of those pages is "
+                f"{median:.1f}pt, but too few pages were measurable to "
+                f"rely on it — a single-spaced brief can pass on a small "
+                f"sample. Check by eye.", runs_note])),
         )
 
     if median < MIN_DOUBLE_SPACE_PTS:
@@ -620,15 +662,17 @@ def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
             check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
             passed=False, severity=Severity.CORRECTION,
             message=f"Body text appears single-spaced (median spacing: {median:.1f}pt).",
-            details=f"Double spacing requires ~24pt between baselines for 12pt text. "
-                    f"Median detected: {median:.1f}pt. {coverage_note}",
+            details=" ".join(filter(None, [
+                f"Double spacing requires ~24pt between baselines for 12pt "
+                f"text. Median detected: {median:.1f}pt.",
+                coverage_note, runs_note])),
         )
 
     return CheckResult(
         check_id="FMT-009", name="Double Spacing", rule="32(a)(5)",
         passed=True, severity=Severity.CORRECTION,
         message=f"Body text appears double-spaced (median: {median:.1f}pt).",
-        details=coverage_note,
+        details=" ".join(filter(None, [coverage_note, runs_note])),
     )
 
 

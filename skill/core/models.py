@@ -60,6 +60,10 @@ class PageInfo:
     bottom_margin_inches: float
     fonts: list[dict] = field(default_factory=list)  # [{"name": ..., "size": ...}]
     line_spacing: Optional[float] = None  # approximate pts between baselines
+    # Lengths, in lines, of each run of consecutive single-spaced lines on
+    # this page. Informational: Rule 32(a)(5) permits single-spaced headings
+    # and quotations, so a run is not itself a violation.
+    single_spaced_runs: list[int] = field(default_factory=list)
     text: str = ""
     has_page_number_bottom: bool = False
     page_number_text: Optional[str] = None  # the printed page number if found

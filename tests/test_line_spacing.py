@@ -761,3 +761,107 @@ class TestDoubleSpacingCoverage:
         assert result.passed is False
         assert result.applicable is True
         assert "3 of 3" in result.details
+
+
+# ===================================================================
+# Single-spaced passages — reported, never scored
+# ===================================================================
+
+class TestSingleSpacedRunReporting:
+    """FMT-009 locates isolated single-spaced blocks without judging them.
+
+    The median verdict catches a brief single-spaced throughout but cannot
+    see a localized block — a footnote, a long quotation, a reformatted
+    section.  Rule 32(a)(5) permits headings and quotations to be
+    single-spaced, and nothing in the geometry separates a permitted run
+    from a defective one, so the count goes to the reader, not the verdict.
+    """
+
+    def _meta_with_runs(self, page_runs: list[list[int]], spacing: float = 27.6):
+        pages = [_make_page(0, None)]
+        for i, runs in enumerate(page_runs, start=1):
+            p = _make_page(i, spacing)
+            p.single_spaced_runs = runs
+            pages.append(p)
+        return BriefMetadata(pages=pages, total_pages=len(pages))
+
+    def test_runs_do_not_change_the_verdict(self):
+        """A double-spaced brief with quotations still passes."""
+        meta = self._meta_with_runs([[8, 5], [12], [4]])
+        result = _check_double_spacing(meta)
+        assert result.passed is True
+        assert result.applicable is True
+
+    def test_runs_are_counted_and_located(self):
+        meta = self._meta_with_runs([[8, 5], [12], [4]])
+        details = _check_double_spacing(meta).details
+        assert "Single-spaced passages of 3+ lines: 4" in details
+        assert "longest 12 lines, page 3" in details
+
+    def test_substantial_runs_name_their_pages(self):
+        """Runs longer than a typical block quotation get a pointer."""
+        meta = self._meta_with_runs([[8], [3], [12]])
+        details = _check_double_spacing(meta).details
+        assert "pages 2, 4" in details, details
+
+    def test_short_runs_counted_but_not_located(self):
+        """A brief of ordinary block quotations gets a count, no page list."""
+        meta = self._meta_with_runs([[3, 4], [5]])
+        details = _check_double_spacing(meta).details
+        assert "Single-spaced passages of 3+ lines: 3" in details
+        assert "longer than a typical block quotation" not in details
+
+    def test_cover_page_runs_are_ignored(self):
+        """A caption block is single-spaced by convention, not by defect."""
+        pages = [_make_page(0, None), _make_page(1, 27.6)]
+        pages[0].single_spaced_runs = [20]      # cover
+        pages[1].single_spaced_runs = []
+        meta = BriefMetadata(pages=pages, total_pages=2)
+        assert "Single-spaced" not in (_check_double_spacing(meta).details or "")
+
+    def test_no_runs_reports_nothing(self):
+        meta = self._meta_with_runs([[], []])
+        details = _check_double_spacing(meta).details
+        assert "Single-spaced" not in details
+        assert "measurable on" in details, "coverage note must survive"
+
+    def test_reported_on_a_failing_brief_too(self):
+        meta = self._meta_with_runs([[9], [9]], spacing=14.4)
+        result = _check_double_spacing(meta)
+        assert result.passed is False
+        assert "Single-spaced passages" in result.details
+
+    def test_says_they_are_not_violations(self):
+        """The report must not let a permitted quotation read as a finding."""
+        meta = self._meta_with_runs([[9]])
+        details = _check_double_spacing(meta).details
+        assert "not counted as violations" in details
+        assert "permits headings and quotations" in details
+
+
+class TestFindSingleSpacedRuns:
+    """The extraction-side helper."""
+
+    def test_counts_a_run_across_split_blocks(self):
+        from core.pdf_extract import _find_single_spaced_runs
+        # Six single-spaced lines, each in its own block
+        blocks = [_make_block([100 + i * 14.4]) for i in range(6)]
+        assert _find_single_spaced_runs(blocks) == [6]
+
+    def test_double_spaced_text_yields_no_runs(self):
+        from core.pdf_extract import _find_single_spaced_runs
+        blocks = [_make_block([100 + i * 27.6]) for i in range(10)]
+        assert _find_single_spaced_runs(blocks) == []
+
+    def test_two_line_runs_are_below_the_reporting_floor(self):
+        from core.pdf_extract import _find_single_spaced_runs
+        blocks = [_make_block([100.0, 114.4])]
+        assert _find_single_spaced_runs(blocks) == []
+
+    def test_separate_runs_reported_separately(self):
+        from core.pdf_extract import _find_single_spaced_runs
+        ys = [100 + i * 14.4 for i in range(4)]          # run of 4
+        ys += [ys[-1] + 27.6 + i * 27.6 for i in range(3)]  # double-spaced gap
+        ys += [ys[-1] + 14.4 * (i + 1) for i in range(3)]   # run of 4
+        blocks = [_make_block([y]) for y in ys]
+        assert sorted(_find_single_spaced_runs(blocks)) == [4, 4]

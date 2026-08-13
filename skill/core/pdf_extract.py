@@ -10,7 +10,11 @@ from typing import Optional
 
 import fitz  # PyMuPDF
 
-from core.constants import ADDENDUM_PATTERN
+from core.constants import (
+    ADDENDUM_PATTERN,
+    MIN_DOUBLE_SPACE_PTS,
+    MIN_REPORTABLE_RUN_LINES,
+)
 from core.models import BriefMetadata, PageInfo
 
 
@@ -117,6 +121,7 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
 
     # Line spacing: measure baselines in text blocks
     line_spacing = _estimate_line_spacing(blocks)
+    single_spaced_runs = _find_single_spaced_runs(blocks)
 
     # Page number detection at bottom
     has_page_num, page_num_text, page_num_unknown = _detect_page_number(
@@ -133,6 +138,7 @@ def _extract_page(page: fitz.Page, page_idx: int) -> PageInfo:
         bottom_margin_inches=bottom_margin,
         fonts=fonts,
         line_spacing=line_spacing,
+        single_spaced_runs=single_spaced_runs,
         text=text,
         has_page_number_bottom=has_page_num,
         page_number_text=page_num_text,
@@ -314,6 +320,46 @@ def _estimate_line_spacing(blocks: list[dict]) -> Optional[float]:
                 spacings.append(spacing)
 
     return statistics.median(spacings) if spacings else None
+
+
+
+def _find_single_spaced_runs(blocks: list[dict]) -> list[int]:
+    """Lengths of runs of consecutive single-spaced lines on a page.
+
+    Walks every baseline on the page in vertical order, not block by block,
+    because a single-spaced passage is often split across blocks the same way
+    a double-spaced one is.
+
+    Reported, never judged.  Rule 32(a)(5) permits headings and quotations to
+    be single-spaced, and in test-data/ 22 of 23 briefs carry such runs —
+    tables of contents and authorities, block quotations, signature blocks,
+    certificates.  Nothing in the geometry separates a permitted run from a
+    violation, so the count travels to the reader rather than to the verdict.
+    """
+    origins: list[float] = []
+    for block in blocks:
+        if block.get("type") != 0:
+            continue
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                if span["text"].strip():
+                    origins.append(span["origin"][1])
+                    break
+    origins.sort()
+
+    runs: list[int] = []
+    run = 1
+    for i in range(1, len(origins)):
+        gap = origins[i] - origins[i - 1]
+        if 8 < gap < MIN_DOUBLE_SPACE_PTS:
+            run += 1
+        else:
+            if run >= MIN_REPORTABLE_RUN_LINES:
+                runs.append(run)
+            run = 1
+    if run >= MIN_REPORTABLE_RUN_LINES:
+        runs.append(run)
+    return runs
 
 
 def _detect_page_number(

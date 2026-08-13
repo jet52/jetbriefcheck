@@ -56,6 +56,21 @@ LEADING_TO_FONT_FULL_SIZE_RATIO = 2.6
 # it rather than on either cluster.
 MIN_SPACING_COVERAGE_PCT = 50.0
 
+# Single-spaced runs, reported with FMT-009 but never scored.
+#
+# A run must reach MIN_REPORTABLE_RUN_LINES to be counted at all — two
+# consecutive close baselines are usually a wrapped heading or a stray
+# measurement, and they dominate the data (379 of them across test-data/
+# against 160 three-line runs).
+#
+# SUBSTANTIAL_RUN_LINES marks the runs worth pointing a reader at. Block
+# quotations in the sample run 3-8 lines; the histogram thins sharply above
+# 10 (11 runs of exactly 10 lines, then 6 runs in total across 11-32 lines).
+# A run at or above this length is longer than a typical quotation, so it is
+# named with its page. Below it, runs are counted but not located.
+MIN_REPORTABLE_RUN_LINES = 3
+SUBSTANTIAL_RUN_LINES = 8
+
 # --- Page limits ---
 PAGE_LIMITS = {
     BriefType.APPELLANT: 38,
