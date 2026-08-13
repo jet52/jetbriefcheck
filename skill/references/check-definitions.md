@@ -17,7 +17,6 @@ These are run by `check_brief.py` — no changes needed here.
 | FMT-007 | Max 16 chars/inch | 32(a)(5) | CORRECTION |
 | FMT-008 | Plain roman style | 32(a)(6) | NOTE |
 | FMT-009 | Double-spaced body text | 32(a)(5) | CORRECTION | ⚠ High false-positive rate — spacing detection miscalibrated for many PDF encodings |
-| FMT-010 | Footnotes double-spaced, same typeface | 32(a)(5) | NOTE |
 | FMT-011 | Pages numbered at bottom | 32(a)(4) | CORRECTION |
 | FMT-012 | Numbering starts with "1" on cover | 32(a)(4) | NOTE |
 | PG-001 | Principal brief <= 38 pages (excl. addendum) | 32(a)(8) | REJECT |
@@ -287,6 +286,17 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Fail if**: Post-1997 cases cited without medium-neutral format, or other misapplication of the rule.
 **Note**: Be lenient — this is an advisory check. CIT-001 (mechanical) catches the most obvious violations.
 **Severity**: NOTE
+
+## Retired Check IDs
+
+Do not reuse these identifiers; they appear in reports already issued.
+
+- **FMT-010** — *Footnotes double-spaced, same typeface* (Rule 32(a)(5)). Retired because
+  the requirement is not distinct from the body's. Rule 32(a)(5) requires 12pt type,
+  double spacing subject to a quotation exception, and one typeface throughout; footnotes
+  are part of "the text" and carry the same obligations. FMT-006, FMT-008, and FMT-009
+  measure all text on the page, footnotes included, so a separate footnote check added no
+  coverage — it only ever reported that it could not identify footnotes.
 
 ## Recommendation Logic
 

@@ -128,7 +128,7 @@ The HTML report has several sections:
 
 - **Passed Checks** — an expandable section listing everything that passed. Click to expand.
 
-- **Not Applicable / Not Determined** — two different things, both kept out of the recommendation. *Not applicable* means the check does not reach this brief type (amicus checks on an appellant brief). *Not determined* means the requirement is real but was never verified — the checker could not reach it, so it is unverified, not satisfied. **COV-001** (cover color) and **FMT-010** (footnote spacing) always land here: Rule 32 governs the physical cover and the footnotes, and a PDF records neither the cover stock nor a reliable footnote boundary. Both need a human eye on every brief. Others arrive here situationally — line spacing measurable on too few pages, a footer that cannot be read, a semantic check that returned no result.
+- **Not Applicable / Not Determined** — two different things, both kept out of the recommendation. *Not applicable* means the check does not reach this brief type (amicus checks on an appellant brief). *Not determined* means the requirement is real but was never verified — the checker could not reach it, so it is unverified, not satisfied. **COV-001** (cover color) always lands here: Rule 32(a)(2) governs the physical cover, which a PDF does not record, so it needs a human eye on every brief. Others arrive here situationally — line spacing measurable on too few pages, a footer that cannot be read, a semantic check that returned no result.
 
 - **Not Applicable** — checks that don't apply to this brief type (e.g., amicus-specific checks on an appellant brief).
 

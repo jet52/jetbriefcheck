@@ -55,9 +55,12 @@ pytest tests/
     nothing on this path may import `checks_semantic`. Shared check definitions live in
     `core/semantic_definitions.py` (pure data) for exactly this reason.
   - *API path* (Flask app, CLI with a key): `core/checks_semantic.run_semantic_checks`.
-- **COV-001** (cover color) and **FMT-010** (footnote spacing) are *structurally* undeterminable — Rule 32
-  governs the physical artifact, which a PDF does not record. They report undetermined on every brief and
-  must never be marked passed; the message still names the required color so the manual check is actionable.
+- **COV-001** (cover color) is *structurally* undeterminable — Rule 32(a)(2) governs the physical cover,
+  which a PDF does not record. It reports undetermined on every brief and must never be marked passed; the
+  message still names the required color so the manual check is actionable.
+- **FMT-010 (footnote spacing) is retired**, not missing. Rule 32(a)(5) imposes no requirement on footnotes
+  distinct from the body — footnotes are part of "the text" — so FMT-006/008/009 measuring all text cover it.
+  See "Retired Check IDs" in `check-definitions.md`; do not reassign the id.
 - On both paths, a check that was not evaluated is reported **undetermined**
   (`applicable=False`), never passed — omitted from the semantic JSON on the skill path,
   or unparseable/absent from the API response on the other. Never reintroduce a

@@ -40,8 +40,36 @@ CHECK_ID_RE = re.compile(r"\b([A-Z]{2,4}-\d{3})\b")
 QUOTED_ID_RE = re.compile(r"[\"']([A-Z]{2,4}-\d{3})[\"']")
 
 
+RETIRED_HEADING = "## Retired Check IDs"
+
+
 def _ids_in_markdown(path: Path) -> set[str]:
-    return set(CHECK_ID_RE.findall(path.read_text()))
+    """Check ids named in a document, excluding any retired-id section.
+
+    A retired id stays documented so it is never reassigned — reports
+    already issued carry it — but it is deliberately not implemented, so it
+    must not count as drift.
+    """
+    text = path.read_text()
+    if RETIRED_HEADING in text:
+        body, retired = text.split(RETIRED_HEADING, 1)
+        # The retired section runs to the next top-level heading.
+        rest = retired.split("\n## ", 1)
+        text = body + (rest[1] if len(rest) > 1 else "")
+    return set(CHECK_ID_RE.findall(text))
+
+
+# Only the id at the head of a bullet is retired — the prose explaining a
+# retirement routinely names the checks that absorbed its coverage.
+RETIRED_ENTRY_RE = re.compile(r"^- \*\*([A-Z]{2,4}-\d{3})\*\*", re.MULTILINE)
+
+
+def _retired_ids() -> set[str]:
+    text = (SKILL_DIR / "references" / "check-definitions.md").read_text()
+    if RETIRED_HEADING not in text:
+        return set()
+    section = text.split(RETIRED_HEADING, 1)[1].split("\n## ", 1)[0]
+    return set(RETIRED_ENTRY_RE.findall(section))
 
 
 def _ids_in_core() -> set[str]:
@@ -88,6 +116,19 @@ class TestCheckInventory:
             f"only in core: {sorted(core_ids - skill_md_ids)}"
         )
 
+    def test_retired_ids_are_not_implemented(self):
+        """A retired id must stay retired — never quietly reassigned."""
+        retired = _retired_ids()
+        assert retired, "expected at least one documented retired id"
+        clash = sorted(retired & _ids_in_core())
+        assert not clash, f"retired ids back in use: {clash}"
+
+    def test_retired_ids_are_gone_from_skill_md(self):
+        """SKILL.md ships in the zip; a retired check must not appear there."""
+        skill_ids = _ids_in_markdown(SKILL_DIR / "SKILL.md")
+        clash = sorted(_retired_ids() & skill_ids)
+        assert not clash, f"retired ids still listed in SKILL.md: {clash}"
+
     def test_semantic_check_ids_are_unique(self):
         ids = [c[0] for c in SEMANTIC_CHECKS]
         duplicates = sorted({i for i in ids if ids.count(i) > 1})
@@ -119,12 +160,11 @@ class TestCheckInventory:
 class TestUndeterminableChecks:
     """Checks a PDF can never answer must not report as passed.
 
-    COV-001 (physical cover color) and FMT-010 (footnote spacing) describe
-    real Rule 32 requirements that PDF analysis cannot reach — cover color is
-    not recorded in the file, and extraction cannot reliably separate a
-    footnote from body text.  Both previously returned passed=True with the
-    caveat buried in the message, so they sat in the report's "Passed Checks"
-    list and a brief with single-spaced footnotes showed a passing FMT-010.
+    COV-001 (physical cover color) describes a real Rule 32(a)(2)
+    requirement that PDF analysis cannot reach — cover color is not recorded
+    in the file.  It previously returned passed=True with the caveat buried
+    in the message, so it sat in the report's "Passed Checks" list and a
+    brief with the wrong cover stock showed a passing COV-001.
     """
 
     @pytest.mark.parametrize("brief_type", [
@@ -146,33 +186,25 @@ class TestUndeterminableChecks:
         assert "blue" in result.message.lower()
         assert "check by eye" in result.message.lower()
 
-    def test_footnote_spacing_is_undetermined(self):
-        from core.checks_mechanical import _check_footnote_spacing
-        result = _check_footnote_spacing(BriefMetadata())
-        assert result.applicable is False
-        assert result.passed is False
-        assert result.failed is False
-        assert "not determined" in result.message.lower()
-
     def test_neither_appears_in_passed_checks(self):
         """The report groups by these properties, so assert on them directly."""
-        from core.checks_mechanical import _check_cover_color, _check_footnote_spacing
+        from core.checks_mechanical import _check_cover_color
         meta = BriefMetadata(brief_type=BriefType.APPELLANT)
         report = ComplianceReport(
             brief_type=BriefType.APPELLANT,
             recommendation=Recommendation.ACCEPT,
-            results=[_check_cover_color(meta), _check_footnote_spacing(meta)],
+            results=[_check_cover_color(meta)],
         )
         assert report.passed_checks == []
         assert report.failed_checks == []
-        assert {r.check_id for r in report.inapplicable_checks} == {"COV-001", "FMT-010"}
+        assert {r.check_id for r in report.inapplicable_checks} == {"COV-001"}
 
     def test_undetermined_checks_do_not_change_the_recommendation(self):
-        from core.checks_mechanical import _check_cover_color, _check_footnote_spacing
+        from core.checks_mechanical import _check_cover_color
         from core.recommender import compute_recommendation
         meta = BriefMetadata(brief_type=BriefType.APPELLANT)
-        results = [_check_cover_color(meta), _check_footnote_spacing(meta)]
+        results = [_check_cover_color(meta)]
         rec, reasoning = compute_recommendation(results, use_claude_weighting=False)
         assert rec == Recommendation.ACCEPT
         # ...but the reader is told what was never verified
-        assert "COV-001" in reasoning and "FMT-010" in reasoning
+        assert "COV-001" in reasoning

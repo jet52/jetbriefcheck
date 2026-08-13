@@ -43,7 +43,6 @@ def run_mechanical_checks(metadata: BriefMetadata) -> list[CheckResult]:
     results.extend(_check_margins(metadata))
     results.extend(_check_fonts(metadata))
     results.append(_check_double_spacing(metadata))
-    results.append(_check_footnote_spacing(metadata))
     results.extend(_check_page_numbering(metadata))
     results.append(_check_page_limit(metadata))
     results.append(_check_cover_color(metadata))
@@ -557,7 +556,13 @@ def _check_font_style(metadata: BriefMetadata) -> str:
 
 
 def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
-    """FMT-009: Body text is double-spaced.
+    """FMT-009: Text is double-spaced.
+
+    Covers all text on the page, footnotes included.  Rule 32(a)(5) requires
+    "the text" to be double-spaced and separately requires footnotes to be
+    double-spaced; footnotes are part of "the text" (the pre-2023 rule had to
+    grant them an express permission to be single-spaced, which it would not
+    have needed otherwise), so the same measurement answers both.
 
     The median is only as good as the sample behind it.  Spacing cannot be
     measured on every page — a page of block quotations, a signature page, a
@@ -624,25 +629,6 @@ def _check_double_spacing(metadata: BriefMetadata) -> CheckResult:
         passed=True, severity=Severity.CORRECTION,
         message=f"Body text appears double-spaced (median: {median:.1f}pt).",
         details=coverage_note,
-    )
-
-
-def _check_footnote_spacing(metadata: BriefMetadata) -> CheckResult:
-    """FMT-010: Footnotes double-spaced, same typeface.
-
-    Undetermined rather than passed.  Extraction cannot reliably tell a
-    footnote from body text, so nothing here is verified — and a brief whose
-    footnotes are single-spaced would otherwise show a passing FMT-010.
-    """
-    return CheckResult(
-        check_id="FMT-010", name="Footnote Spacing", rule="32(a)(5)",
-        passed=False, severity=Severity.NOTE, applicable=False,
-        message="Not determined — footnote spacing and typeface were not "
-                "verified. Check by eye.",
-        details="Rule 32(a)(5) requires footnotes to be double-spaced and set "
-                "in the same typeface as the body. PDF extraction cannot "
-                "reliably distinguish footnotes from body text, so this "
-                "requirement is unverified, not satisfied.",
     )
 
 

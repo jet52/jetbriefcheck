@@ -255,7 +255,6 @@ These are run by `check_brief.py` — no changes needed here.
 | FMT-007 | Max 16 chars/inch                                   | 32(a)(5)          | CORRECTION      |
 | FMT-008 | Plain roman style                                   | 32(a)(6)          | NOTE            |
 | FMT-009 | Double-spaced body text                             | 32(a)(5)          | CORRECTION      |
-| FMT-010 | Footnotes double-spaced, same typeface              | 32(a)(5)          | NOTE            |
 | FMT-011 | Pages numbered at bottom                            | 32(a)(4)          | CORRECTION      |
 | FMT-012 | Numbering starts with "1" on cover                  | 32(a)(4)          | NOTE            |
 | PG-001  | Principal brief <= 38 pages (excl. addendum)        | 32(a)(8)          | REJECT          |
