@@ -84,6 +84,10 @@ pytest tests/
   scope: the constants remain so the field can be filled later, but nothing sets them and `flagged` does
   not consult them. Existence needs no pinpoint, so every ND authority is checked, deduped by
   `_authority_key` (subsections are pinpoints into an authority, not separate authorities).
+- **Rule staleness is date-based on purpose.** `_check_rules_live()` compares scraped effective dates
+  only, so it does not catch a silent correction — text changed on ndcourts.gov without a new effective
+  date. That is deliberate, not a gap: detecting those is ndlaw's job, and the bundled rules under
+  `references/rules/` are refreshed periodically from it. Do not rebuild live text-diffing here.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content
