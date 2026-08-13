@@ -35,6 +35,7 @@ from core.constants import (
     SMALL_CAPS_SUSPICIOUS_PAGE_PCT,
 )
 from core.models import BriefMetadata, BriefType, CheckResult, Severity
+from core.semantic_definitions import gated_check_result
 
 
 def run_mechanical_checks(metadata: BriefMetadata) -> list[CheckResult]:
@@ -779,12 +780,14 @@ def _check_page_limit(metadata: BriefMetadata) -> CheckResult:
     limit = PAGE_LIMITS.get(bt)
 
     if limit is None:
-        check_id = "PG-001"
         return CheckResult(
-            check_id=check_id, name="Page Limit", rule="32(a)(8)",
-            passed=True, severity=Severity.REJECT,
-            message="Brief type unknown; page limit not checked.",
-            applicable=False,
+            check_id="PG-001", name="Page Limit", rule="32(a)(8)",
+            passed=False, severity=Severity.REJECT, applicable=False,
+            message="Not determined — brief type could not be identified, so "
+                    "the applicable page limit is unknown.",
+            details=f"The brief is {metadata.total_pages} pages. Limits run "
+                    f"from 10 pages (rehearing) to 38 (principal brief); "
+                    f"re-run with the brief type supplied to check it.",
         )
 
     # Determine check ID and rule citation
@@ -948,12 +951,9 @@ def _check_record_citations(metadata: BriefMetadata) -> CheckResult:
     # Only applicable to briefs that cite the record
     applicable_types = {BriefType.APPELLANT, BriefType.APPELLEE, BriefType.CROSS_APPEAL}
     if metadata.brief_type not in applicable_types:
-        return CheckResult(
-            check_id="REC-001", name="Record Citations Present", rule="30(a)",
-            passed=True, severity=Severity.NOTE,
-            message=f"Not applicable to {metadata.brief_type.value} briefs.",
-            applicable=False,
-        )
+        return gated_check_result(
+            "REC-001", "Record Citations Present", "30(a)",
+            Severity.NOTE, metadata.brief_type)
 
     # Look for (R{index}:{page}) pattern per Rule 30(b)(1)
     record_cites = re.findall(r"\(R\d+:\d+", metadata.full_text)

@@ -208,3 +208,73 @@ class TestUndeterminableChecks:
         assert rec == Recommendation.ACCEPT
         # ...but the reader is told what was never verified
         assert "COV-001" in reasoning
+
+
+# ---------------------------------------------------------------------------
+# Brief-type gating: not applicable vs not determined
+# ---------------------------------------------------------------------------
+
+class TestGatedCheckResult:
+    """A skipped check must say *why* it was skipped.
+
+    Fifteen semantic checks are gated on brief type, plus PG-001 and REC-001
+    on the mechanical side. When the type is known, skipping an amicus check
+    on an appellant brief is a genuine exclusion. When the type is UNKNOWN,
+    the same checks are skipped for want of a classification — a brief does
+    not stop needing a Statement of Issues because its cover could not be
+    read — and three of them are REJECT severity (SEC-006, SEC-008, SEC-009).
+    """
+
+    def _gated(self, brief_type):
+        from core.semantic_definitions import gated_check_result
+        from core.models import Severity
+        return gated_check_result(
+            "SEC-006", "Statement of Issues", "28(b)(4)",
+            Severity.REJECT, brief_type)
+
+    def test_known_type_is_not_applicable(self):
+        r = self._gated(BriefType.AMICUS)
+        assert r.applicable is False
+        assert r.passed is True
+        assert "not applicable" in r.message.lower()
+
+    def test_unknown_type_is_not_determined(self):
+        r = self._gated(BriefType.UNKNOWN)
+        assert r.applicable is False
+        assert r.passed is False
+        assert "not determined" in r.message.lower()
+        assert "not applicable" not in r.message.lower()
+
+    def test_neither_becomes_a_finding(self):
+        for bt in (BriefType.AMICUS, BriefType.UNKNOWN):
+            assert self._gated(bt).failed is False
+
+    def test_unknown_type_gates_every_type_specific_check(self):
+        """All 15 must be reported, none silently dropped."""
+        from core.semantic_definitions import gated_check_result
+        gated = [c for c in SEMANTIC_CHECKS
+                 if c[3] is not None and BriefType.UNKNOWN not in c[3]]
+        assert len(gated) == 15, f"inventory changed: {len(gated)} gated checks"
+        for cid, name, rule, _types, severity, _desc in gated:
+            r = gated_check_result(cid, name, rule, severity, BriefType.UNKNOWN)
+            assert r.passed is False and r.applicable is False, cid
+
+    def test_page_limit_is_not_determined_when_type_unknown(self):
+        from core.checks_mechanical import _check_page_limit
+        r = _check_page_limit(BriefMetadata(brief_type=BriefType.UNKNOWN, total_pages=44))
+        assert r.applicable is False
+        assert r.passed is False
+        assert "not determined" in r.message.lower()
+        assert "44 pages" in (r.details or ""), "should still report what it measured"
+
+    def test_record_citations_not_determined_when_type_unknown(self):
+        from core.checks_mechanical import _check_record_citations
+        r = _check_record_citations(BriefMetadata(brief_type=BriefType.UNKNOWN))
+        assert r.passed is False and r.applicable is False
+        assert "not determined" in r.message.lower()
+
+    def test_record_citations_still_not_applicable_for_amicus(self):
+        from core.checks_mechanical import _check_record_citations
+        r = _check_record_citations(BriefMetadata(brief_type=BriefType.AMICUS))
+        assert r.passed is True and r.applicable is False
+        assert "not applicable" in r.message.lower()

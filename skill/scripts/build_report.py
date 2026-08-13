@@ -24,7 +24,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from core.models import BriefMetadata, BriefType, CheckResult, ComplianceReport, Recommendation, Severity
 from core.report_builder import build_html_report
-from core.semantic_definitions import SEMANTIC_CHECKS
+from core.semantic_definitions import SEMANTIC_CHECKS, gated_check_result
 from core.version_check import get_version_stamp
 
 
@@ -170,12 +170,10 @@ def _missing_semantic_results(
         if check_id in seen:
             continue
         if types is not None and brief_type not in types:
-            # Genuinely inapplicable to this brief type — expected absence.
-            missing.append(CheckResult(
-                check_id=check_id, name=name, rule=rule,
-                passed=True, severity=severity, applicable=False,
-                message=f"Not applicable to {brief_type.value} briefs.",
-            ))
+            # Either genuinely inapplicable, or skipped for want of a brief
+            # type — gated_check_result tells those apart.
+            missing.append(
+                gated_check_result(check_id, name, rule, severity, brief_type))
         else:
             missing.append(CheckResult(
                 check_id=check_id, name=name, rule=rule,

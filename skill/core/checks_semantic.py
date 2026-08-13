@@ -18,7 +18,10 @@ from typing import Optional
 import anthropic
 
 from core.models import BriefMetadata, BriefType, CheckResult, Severity
-from core.semantic_definitions import SEMANTIC_CHECKS  # noqa: F401
+from core.semantic_definitions import (  # noqa: F401
+    SEMANTIC_CHECKS,
+    gated_check_result,
+)
 
 # Bundled rules directory (relative to project root)
 _PROJECT_RULES_DIR = Path(__file__).resolve().parent.parent / "references" / "rules"
@@ -81,12 +84,8 @@ def run_semantic_checks(
     inapplicable = []
     for check_id, name, rule, types, severity, desc in SEMANTIC_CHECKS:
         if types is not None and metadata.brief_type not in types:
-            inapplicable.append(CheckResult(
-                check_id=check_id, name=name, rule=rule,
-                passed=True, severity=severity,
-                message=f"Not applicable to {metadata.brief_type.value} briefs.",
-                applicable=False,
-            ))
+            inapplicable.append(gated_check_result(
+                check_id, name, rule, severity, metadata.brief_type))
         else:
             applicable.append((check_id, name, rule, severity, desc))
 

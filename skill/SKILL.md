@@ -110,7 +110,10 @@ You (Claude) perform the semantic analysis directly — no API call needed.
 }
 ```
 
-Each semantic check must appear in the results — either as an evaluated result (applicable: true) or as not-applicable (passed: true, applicable: false).
+Each semantic check must appear in the results — either as an evaluated result (applicable: true) or, when it does not reach this brief, as one of two things:
+
+- **Not applicable** (`passed: true, applicable: false`) — the brief type is known and the check does not reach it, e.g. an amicus disclosure check on an appellant brief. Message: "Not applicable to {brief_type} briefs."
+- **Not determined** (`passed: false, applicable: false`) — the brief type is **unknown**, so a type-specific check was skipped for want of a classification, not because it does not apply. A brief does not stop needing a Statement of Issues because its cover could not be read. Message: "Not determined — brief type could not be identified, so this type-specific check was not run." 
 
 `build_report.py` reconciles what you write against the full check list. Any check you omit is reported as **"Not determined — no result was reported for this check"** and placed in the report's "Not Applicable / Not Determined" section, where it cannot affect the recommendation. That is a safety net, not a shortcut: an omitted check tells the reader nothing was verified. If a check does not apply, say so explicitly with `applicable: false` rather than leaving it out. Never mark a check `passed: true` that you did not actually evaluate.
 

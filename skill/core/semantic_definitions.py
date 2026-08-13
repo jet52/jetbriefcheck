@@ -12,7 +12,7 @@ where ``applicable_types`` of None means every brief type.
 
 from __future__ import annotations
 
-from core.models import BriefType, Severity
+from core.models import BriefType, CheckResult, Severity
 
 
 SEMANTIC_CHECKS = [
@@ -171,3 +171,45 @@ SEMANTIC_CHECKS = [
      None, Severity.NOTE,
      "Claude evaluates whether pre-1997 vs post-1997 citation distinction is correctly applied."),
 ]
+
+
+def gated_check_result(
+    check_id: str,
+    name: str,
+    rule: str,
+    severity: Severity,
+    brief_type: BriefType,
+) -> CheckResult:
+    """Result for a check whose brief type filtered it out.
+
+    Two different things wear the same shape, and only one of them is a
+    genuine exclusion:
+
+    * **Not applicable.** The brief type is known and the check does not
+      reach it — an amicus disclosure requirement on an appellant brief.
+      Nothing is owed, so nothing is unverified.
+    * **Not determined.** The brief type is UNKNOWN, so the check was
+      skipped for want of a classification, not because it does not apply.
+      A brief does not stop needing a Statement of Issues because the cover
+      could not be read. Ten checks are gated this way, three of them at
+      REJECT severity, so labelling them "not applicable" tells the reader
+      they were correctly excluded when they were never run.
+
+    Both carry ``applicable=False`` and stay out of the recommendation; they
+    differ in what the report says happened.
+    """
+    if brief_type == BriefType.UNKNOWN:
+        return CheckResult(
+            check_id=check_id, name=name, rule=rule,
+            passed=False, severity=severity, applicable=False,
+            message="Not determined — brief type could not be identified, so "
+                    "this type-specific check was not run.",
+            details="This check may well apply to the brief; it was skipped "
+                    "for want of a classification. Re-run with the brief type "
+                    "supplied to evaluate it.",
+        )
+    return CheckResult(
+        check_id=check_id, name=name, rule=rule,
+        passed=True, severity=severity, applicable=False,
+        message=f"Not applicable to {brief_type.value} briefs.",
+    )

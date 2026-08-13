@@ -140,7 +140,7 @@ Each failed check shows:
 
 ### Tips for Best Results
 
-- **Specify the brief type** if the cover is unusual. Auto-detection reads the brief's own title line ("BRIEF OF APPELLANT", "BRIEF OF RESPONDENT – APPELLANT") and resolves compound designations by their trailing appellate role, since a cover names the trial-court role first. It is correct on all 22 labelled briefs in the local sample. If the cover carries no such title, the checker reports the type as unknown rather than guessing from the caption — both parties appear there — and an unknown type means the page limit and the brief-type-specific section checks are skipped. Telling Claude the type up front avoids that.
+- **Specify the brief type** if the cover is unusual. Auto-detection reads the brief's own title line ("BRIEF OF APPELLANT", "BRIEF OF RESPONDENT – APPELLANT") and resolves compound designations by their trailing appellate role, since a cover names the trial-court role first. It is correct on all 22 labelled briefs in the local sample. If the cover carries no such title, the checker reports the type as unknown rather than guessing from the caption — both parties appear there — and an unknown type means the page limit and the brief-type-specific section checks are skipped — they are reported as *not determined* rather than passed or not applicable, so the report shows what went unverified. Telling Claude the type up front avoids that.
 
 - **Known measurement pitfalls to watch for.** These are calibrated against the sample of 23 briefs in `test-data/`; the counts below come from that sample, not from production volume.
 

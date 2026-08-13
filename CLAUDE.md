@@ -71,7 +71,9 @@ pytest tests/
   "respondent - appellant" is an appellant brief. The "brief of X" window takes no closing delimiter —
   `_normalize` collapses newlines, so requiring one silently failed on plain "BRIEF OF APPELLANT".
   `UNKNOWN` is a real outcome, not a bug: the caption names both parties, so with no title line the
-  classifier declines rather than guessing. Note UNKNOWN skips the page limit and 15 type-gated checks.
+  classifier declines rather than guessing. When the type is UNKNOWN the 15 type-gated semantic checks
+  plus PG-001/REC-001 report **not determined**, never "not applicable" — use `gated_check_result`
+  (`semantic_definitions.py`), which both execution paths share.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content
