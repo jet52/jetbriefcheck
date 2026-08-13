@@ -24,8 +24,10 @@ from core.citations import (
     FLAG_MISQUOTATION,
     FLAG_NAME_DRIFT,
     FLAG_UNRESOLVED,
+    FLAG_UNRESOLVED_AUTHORITY,
     CitationFinding,
     CitationReview,
+    misquotation_is_comparable,
     clean_draft_text,
     name_drift_is_real,
     normalize_caption,
@@ -125,6 +127,50 @@ class TestNameDriftSuppression:
 
     def test_missing_name_is_not_drift(self):
         assert name_drift_is_real("", "State v. Juntunen") is False
+
+
+class TestMisquotationArtifacts:
+    """check_draft attributes a quote to the nearest cite, and can miss.
+
+    When the guess is wrong there is nothing to compare against, so the flag
+    comes back with no closest passage and no diff — it records a failed
+    attribution, not a misquotation. Observed on a filed brief: two of three
+    misquotation flags were artifacts of exactly this shape, and reporting
+    them would have put false findings on correctly quoted passages.
+    """
+
+    def test_flag_with_a_diff_is_a_real_comparison(self):
+        assert misquotation_is_comparable(
+            {"similarity": 0.606, "differences": ["- An", "+ a"],
+             "closest_text": "An order refusing a motion"}) is True
+
+    def test_flag_with_closest_text_only_is_real(self):
+        assert misquotation_is_comparable(
+            {"similarity": 0.9, "closest_text": "some passage"}) is True
+
+    def test_failed_attribution_is_not_reported(self):
+        assert misquotation_is_comparable(
+            {"similarity": 0, "differences": None, "closest_text": None}) is False
+
+    def test_artifacts_are_suppressed_and_counted(self):
+        payload = {"summary": {}, "flags": [
+            {"type": FLAG_MISQUOTATION, "similarity": 0,
+             "differences": None, "closest_text": None},
+            {"type": FLAG_MISQUOTATION, "similarity": 0.6,
+             "differences": ["- a"], "closest_text": "real passage"},
+        ]}
+        review = CitationReview.from_check_draft(payload)
+        assert len(review.findings) == 1
+        assert review.suppressed == 1
+
+    def test_unresolved_authority_is_reported_not_dropped(self):
+        """Silently dropping a flag type is the failure this project avoids."""
+        payload = {"summary": {}, "flags": [
+            {"type": FLAG_UNRESOLVED_AUTHORITY, "cited_as": "N.D.C.C. 99-99-99",
+             "draft_context": "see N.D.C.C. 99-99-99"}]}
+        review = CitationReview.from_check_draft(payload)
+        assert len(review.findings) == 1
+        assert "does not resolve" in review.findings[0].headline
 
 
 class TestParagraphAttribution:

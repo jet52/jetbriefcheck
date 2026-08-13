@@ -141,8 +141,30 @@ def name_drift_is_real(written: str, canonical: str) -> bool:
 FLAG_MISQUOTATION = "misquotation"
 FLAG_UNRESOLVED = "unresolved_case_cite"
 FLAG_NAME_DRIFT = "case_name_drift"
+FLAG_UNRESOLVED_AUTHORITY = "unresolved_authority"
 
-_REPORTABLE = {FLAG_MISQUOTATION, FLAG_UNRESOLVED, FLAG_NAME_DRIFT}
+_REPORTABLE = {FLAG_MISQUOTATION, FLAG_UNRESOLVED, FLAG_UNRESOLVED_AUTHORITY,
+               FLAG_NAME_DRIFT}
+
+
+def misquotation_is_comparable(flag: dict) -> bool:
+    """True when a misquotation flag actually compared two passages.
+
+    ``check_draft`` attributes a quotation to the nearest citation, and says
+    so.  When that guess is wrong there is nothing in the cited authority to
+    compare against, and the flag comes back with similarity 0, no closest
+    passage and no word-level diff — it records a failed attribution, not a
+    misquotation.  A real one always carries the closest text and the diff.
+
+    Observed on a filed brief: of three misquotation flags, the two with no
+    closest text were both attribution artifacts (one paired the closing
+    quote of one passage with the opening of the next; the other attributed
+    N.D.R.Ev. 201(e)'s words to a case).  The third, carrying a diff, was a
+    genuine composite quotation.
+    """
+    if flag.get("closest_text") or flag.get("differences"):
+        return True
+    return bool(flag.get("similarity"))
 
 
 @dataclass
@@ -163,7 +185,7 @@ class CitationFinding:
 
     @property
     def headline(self) -> str:
-        if self.kind == FLAG_UNRESOLVED:
+        if self.kind in (FLAG_UNRESOLVED, FLAG_UNRESOLVED_AUTHORITY):
             return f"{self.cited_as} does not resolve to any ND authority"
         if self.kind == FLAG_NAME_DRIFT:
             return (f"brief names it {self.written_name}; "
@@ -227,6 +249,9 @@ class CitationReview:
             ):
                 suppressed += 1
                 continue
+            if kind == FLAG_MISQUOTATION and not misquotation_is_comparable(flag):
+                suppressed += 1
+                continue
             cited = flag.get("cited_as", "")
             if isinstance(cited, list):
                 cited = ", ".join(cited)
@@ -286,8 +311,9 @@ def _coverage_line(summary: dict, payload: dict, suppressed: int) -> str:
         parts.append(f"{checked} of {quotes} attributed quotation(s) verified")
     if suppressed:
         parts.append(
-            f"{suppressed} case-name difference(s) set aside as the reporter's "
-            f"own annotation rather than a discrepancy")
+            f"{suppressed} flag(s) set aside as the reporter's own caption "
+            f"annotation or a failed quotation attribution rather than a "
+            f"discrepancy in the brief")
 
     unchecked = payload.get("unchecked") or {}
     if unchecked:
