@@ -317,6 +317,13 @@ Produce a structured text report with:
 - **Full mode**: Python with PyMuPDF installed (`pip install PyMuPDF`)
 - **Fallback mode**: No dependencies — Claude reads the PDF and evaluates checks directly
 - No API keys needed — semantic analysis is performed by Claude directly
+- **Model: Opus is strongly recommended over Sonnet or Haiku**, on initial
+  testing. The mechanical checks and the concealed-text scan are deterministic
+  Python and do not vary by model, but the 32 semantic checks in Phase 2 are
+  your own reading of the brief, and that is where model capability shows.
+  Fallback mode is entirely model-driven, so the recommendation matters most
+  there. The model is recorded in the report footer, which is what makes runs
+  comparable across models.
 
 ## Known Issues
 

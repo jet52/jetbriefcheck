@@ -127,6 +127,34 @@ In practice this isn't a limitation: just **open all your brief-checking chats i
 
 Once installed, using the skill is straightforward. You upload a PDF of an appellate brief, and Claude produces a detailed compliance report.
 
+### Which model to use
+
+**Opus is strongly recommended over Sonnet or Haiku.** This is based on initial
+testing rather than a systematic benchmark, but the difference was clear enough
+to be worth stating.
+
+It helps to know which half of the work the choice affects, because it is not
+the whole report:
+
+- **Not model-dependent.** The mechanical checks (paper size, margins, fonts,
+  line spacing, page limits, page numbering), the brief-type classification,
+  and the concealed-text scan are deterministic Python measurements over the
+  PDF. They produce the same answer on any model.
+- **Model-dependent.** The 32 semantic checks — whether a Table of Contents is
+  present and adequate, whether the Statement of Issues is really one, whether
+  record citations identify their items, whether a conclusion states precise
+  relief — are Claude reading the brief and exercising judgment. So is the
+  narrative of the report, and so are any follow-up questions you ask about it.
+
+**Fallback mode** (no PyMuPDF, e.g. a claude.ai project) is *entirely*
+model-driven: Claude reads the PDF directly and every check is a judgment call,
+with none of the deterministic floor underneath. That is where the choice of
+model matters most.
+
+Every report footer records the model that produced it, so runs stay comparable
+as models change. If you compare models on the same brief, compare the semantic
+checks; the mechanical ones will agree by construction.
+
 ### Checking a Brief
 
 1. **Open a chat** inside your JetBriefCheck project.
