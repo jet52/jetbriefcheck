@@ -1,6 +1,6 @@
 # JetBriefCheck
 
-Checks appellate brief PDFs for compliance with the North Dakota Rules of Appellate Procedure and produces an HTML compliance report with a recommended action: **Accept**, **Correction Letter**, or **Reject**.
+Checks appellate brief PDFs for compliance with the North Dakota Rules of Appellate Procedure and produces an HTML compliance report with a recommended action: **Accept**, **Correction Letter**, or **Reject**. It also scans each filing for **concealed text** — text a machine reads that a person reading the page cannot see.
 
 ## Not an Official Court Product
 
@@ -16,20 +16,64 @@ rejected. Verify results against the current North Dakota Rules of Appellate
 Procedure. It is not legal advice.
 
 ---
-## Installing the Skill in Claude (Desktop)
+## Installing
+
+Three ways in, in the order most people should try them.
+
+### 1. As a plugin from jet-hub — recommended
+
+JetBriefCheck is published through the [jet-hub](https://github.com/jet52/jet-hub)
+marketplace, alongside the other JET legal tools. Add the marketplace once and
+install the plugin from it; updates then come from the repository rather than
+from a file you have to re-download.
+
+```
+/plugin marketplace add jet52/jet-hub
+/plugin install jetbriefcheck@jet-hub
+```
+
+See the [jet-hub README](https://github.com/jet52/jet-hub#readme) for the
+organization-wide install, which pushes the plugin to everyone on a Team or
+Enterprise plan without each person installing it themselves.
+
+> jet-hub pins each plugin to its latest **stable release tag** and re-syncs
+> automatically, so an install tracks published releases rather than in-progress
+> work on `main`. To pull an update through by hand:
+> `/plugin marketplace update jet-hub` then `/plugin update`.
+
+### 2. As a plugin, by direct upload (Cowork)
+
+If you are not using the marketplace, download
+**`jetbriefcheck-plugin-<version>.zip`** from the
+[latest release](https://github.com/jet52/jetbriefcheck/releases/latest) and
+upload it in Cowork under **Customize → Plugins**. This archive carries the
+plugin manifest, which is what makes it install as a plugin rather than as a
+bare skill.
+
+### 3. As a standalone skill
 
 <img width="541" height="318" alt="image" src="https://github.com/user-attachments/assets/037bf067-2090-4fbf-a33b-f810e7e96d08" />
 
-Download the zip from the releases here, and in your desktop app, select Cowork and Customize. Then click Skills and the plus sign to add the zip skill file you just downloaded.
+Download **`jetbriefcheck-skill-<version>.zip`** from the
+[latest release](https://github.com/jet52/jetbriefcheck/releases/latest), then in
+the desktop app select **Cowork → Customize → Skills** and click **+** to add
+the zip. Or unzip it into `~/.claude/skills/`.
 
-## Installing the Skill in Claude (Browser)
+This is the older path and is still supported. Prefer a plugin install if you
+have the choice — it updates itself and it is how the tool is versioned.
+
+> **Which zip?** `-plugin-` includes the manifest and installs as a plugin.
+> `-skill-` is the skill directory alone. Downloading the wrong one is the
+> usual cause of "it installed but Claude doesn't seem to know about it."
+
+## Installing in Claude (Browser)
 
 This section walks you through adding the JetBriefCheck to your Claude account so you can use it directly in a browser chat session. No programming knowledge is required.
 
 ### What You Need Before You Start
 
 - A Claude account at [claude.ai](https://claude.ai) with a Pro, Team, or Enterprise plan (the skill requires the ability to upload files and use projects).
-- The **`jetbriefcheck.zip`** file from the [latest release](https://github.com/jet52/jetbriefcheck/releases/latest). Click on `jetbriefcheck.zip` under Assets to download it.
+- The **`jetbriefcheck-skill-<version>.zip`** file from the [latest release](https://github.com/jet52/jetbriefcheck/releases/latest). Click it under Assets to download it. (Use the `-skill-` archive here, not `-plugin-`: a browser project takes the skill directory, not a plugin manifest.)
 
 ### Step-by-Step Installation
 
@@ -47,7 +91,7 @@ This section walks you through adding the JetBriefCheck to your Claude account s
 
 1. Inside your new project, look for the **Project Knowledge** section (sometimes labeled "Project files" or accessible via a paperclip/attachment icon in the project settings).
 2. Click **Upload** or **Add files**.
-3. Select the **`jetbriefcheck.zip`** file you downloaded earlier.
+3. Select the **`jetbriefcheck-skill-<version>.zip`** file you downloaded earlier.
 4. Wait for the upload to finish. Claude will unpack and index the contents automatically.
 
 The ZIP file contains everything the skill needs: the analysis scripts, the bundled North Dakota appellate rules, check definitions, and the skill instructions. As of v1.5.0, `SKILL.md` is fully self-contained — all rule text and check definitions are bundled inline, so the skill works even without PyMuPDF (falling back to semantic-only checks).
@@ -101,11 +145,12 @@ Once installed, using the skill is straightforward. You upload a PDF of an appel
 
 4. **Wait for the analysis.** Claude will work through several phases automatically:
    - **Extraction** — reads the PDF and measures formatting (paper size, margins, fonts, spacing, page count).
+   - **Concealed-text scan** — renders each page and checks whether every piece of text in the file is actually visible on it.
    - **Mechanical checks** — compares measurements against Rule 32 requirements.
    - **Semantic checks** — reads the brief text and evaluates whether required sections are present and adequate (Table of Contents, Statement of Issues, Argument, etc.).
    - **Report generation** — combines all results into an HTML compliance report.
 
-   > **Note:** If PyMuPDF is not available (e.g., in a claude.ai project), the skill automatically falls back to semantic-only checks. Claude reads the PDF directly and produces a text report, noting that mechanical checks (margins, fonts, spacing, page limits) were skipped.
+   > **Note:** If PyMuPDF is not available (e.g., in a claude.ai project), the skill automatically falls back to semantic-only checks. Claude reads the PDF directly and produces a text report, noting that mechanical checks (margins, fonts, spacing, page limits) were skipped. **The concealed-text scan also does not run in fallback mode**, so the report says the brief was not checked for hidden text rather than implying it was checked and found clean.
 
 5. **Review the results.** Claude will:
    - State the **recommended action**: Accept, Correction Letter, or Reject.
@@ -120,6 +165,14 @@ The HTML report has several sections:
   - **Green (Accept)** — the brief appears to comply with all rules.
   - **Yellow (Correction Letter)** — there are formatting issues that should be corrected, but the brief is not rejected outright.
   - **Red (Reject)** — there are serious compliance failures that warrant rejection.
+
+- **Concealed Text** — text present in the file that a reader of the printed page cannot see: white or near-white type, an invisible render mode, full transparency, text covered by an opaque shape, type below 3pt, text positioned off the page, and invisible Unicode characters (including the tag block used to smuggle ASCII past a human reader, which is decoded for you).
+
+  When something is found this section sits **directly under the recommendation banner, above the compliance findings** — a reader who stops at the banner still has to pass it. Each finding gives the page, the position, the point size, the mechanism (with the measured contrast ratio, where 1.00:1 is invisible), a character count and digest, and **the concealed text reproduced in full**. When nothing is found the section drops to the bottom as a one-line statement of what was checked, because silence would read as "nothing concealed" — which is the one thing an unrun scan cannot establish. A scan that ran and found nothing and a scan that never ran are reported differently.
+
+  **It is not part of the compliance determination.** Concealed text violates none of the rules checked here, and the recommendation is computed before the section is loaded. The report describes precisely what was found and where, and stops: concealed text has innocent causes — production artifacts, redaction layers, template remnants — as well as culpable ones, and the assessment belongs to court staff.
+
+  Concealed passages are removed from the text the semantic checks and the citation review read, so those passes see the document a person sees. The removal is disclosed in the report. **Limitation:** the scan does not read text hidden inside images.
 
 - **Failed Checks** — grouped into three severity levels:
   - **Critical (Reject)** — violations that alone justify rejection (e.g., wrong paper size, font too small, over the page limit).
@@ -178,6 +231,16 @@ Each failed check shows:
 
     FMT-012 (numbering starts at arabic "1" on the cover) is stricter than FMT-011 by design: a brief numbered `Page i of 25` passes FMT-011 — the pages *are* numbered — while FMT-012 correctly flags that the numbering does not start with arabic 1.
 
+  - **Concealed text** — the trigger is *visibility*, never the mechanism, and that distinction is what makes the check usable.
+
+    Two independent tests, both needed. A **glyph test** compares the text's colour against the measured background of the region it occupies (below a 1.5:1 contrast ratio it cannot be made out; ordinary black on white is 21:1) together with its opacity. A **region test** renders the page and asks whether any ink appeared in the text's bounding box at all. Neither subsumes the other: region ink alone misses a white payload laid *over* existing body text, because the neighbouring words supply the ink; colour alone misses perfectly black text covered by a white rectangle.
+
+    **An invisible render mode is never a finding by itself.** Every OCR'd scan carries a full invisible-text layer over the page image, and those words are visible — they *are* the page image. Three of the 23 briefs in `test-data/` are such scans, and triggering on the render mode flagged 100% of their spans, 21,867 in one brief alone. A page whose text is predominantly in that mode is identified as an OCR layer and reported as context, not as concealment; the sub-legible trigger is also suppressed there, because OCR assigns nonsense point sizes to specks and dust.
+
+    Calibrated over the sample's 50,735 text spans: **22 of 23 briefs report nothing.** The 23rd is a misassembled scan whose text layer largely does not correspond to its pages; it is labelled as such, and its findings are still listed in full — suppressing them is precisely what someone hiding a payload would want. Two further floors keep ordinary typography quiet: the measured box excludes whitespace and is padded for glyphs that paint outside it (an underscore does, and unpadded every signature line in the sample read as concealed text), and a finding must clear a length *and* a letters-and-digits floor **after** adjacent runs are merged — so a payload split character-by-character to duck the floor still reaches it.
+
+    *Why this exists:* in *Elliott v. N.Y. Bariatric Group, LLC*, a Connecticut Superior Court judge found a self-represented plaintiff had hidden instructions to an AI in white, tiny-point text in a filing, and revoked the plaintiff's e-filing privileges. The court's objection was not that a model might obey them but that the text was a concealed communication to the decision-maker, pleaded outside the other side's knowledge — a filing-integrity problem whether or not any software ever reads the brief. (As reported at [Volokh Conspiracy](https://reason.com/volokh/2026/08/13/court-faults-self-represented-plaintiff-for-including-hidden-prompt-injection-in-court-filing/), Aug. 13, 2026.)
+
 - **You can ask follow-up questions.** After the report is generated, you can ask Claude things like:
   - "Which pages have the font size issue?"
   - "Is the Table of Contents adequate?"
@@ -222,8 +285,18 @@ The checker evaluates compliance against these North Dakota rules:
 uv venv && uv pip install -r skill/requirements.txt
 source .venv/bin/activate
 
-# Deploy the Claude Code skill (symlinks this repo to ~/.claude/skills/)
+# Deploy the Claude Code skill (COPIES skill/ into ~/.claude/skills/jetbriefcheck/).
+# Only needed on machines without the symlink setup — it deletes an existing
+# symlink at that path, so if you develop against a symlinked skill dir, skip this.
 python deploy_skill.py
+
+# Run the tests
+make test
+
+# Build release artifacts
+make package        # plugin zip (the primary artifact)
+make package-all    # plugin zip + standalone skill zip
+make version-check  # assert version.json, plugin.json and SKILL.md agree
 
 # Run the web interface
 python app.py
@@ -231,11 +304,33 @@ python app.py
 # Or use the Claude Code skill: /jetbriefcheck <path-to-pdf>
 ```
 
+### Packaging notes
+
+Two archives come out of a build, and the difference matters to installers:
+
+| Artifact | Contains | Installs as |
+|---|---|---|
+| `jetbriefcheck-plugin-<version>.zip` | `.claude-plugin/plugin.json` + `skill/` | A plugin (Cowork upload, marketplace) |
+| `jetbriefcheck-skill-<version>.zip` | `jetbriefcheck/` (the skill tree alone) | A standalone skill |
+
+Always package through the Makefile. `zip -r` **adds to** an existing archive
+rather than replacing it, so every public target cleans first; the retired
+`build_zip.sh` did not, and local builds had been quietly accumulating
+repo-root files that were never part of the skill. `build_zip.sh` now just
+delegates to `make package-all`.
+
+Note how an update reaches plugin users: jet-hub pins each plugin to a
+**release tag**, and its sync workflow bumps that pin to the latest stable
+release every 30 minutes. So a build ships when the GitHub release is
+**published** — pushing `main` alone ships nothing, and a release left as a
+draft or marked prerelease is skipped by the sync entirely. `make release`
+does the whole sequence.
+
 ## Architecture
 
 - **`skill/`** — Deployable skill content (symlinked to `~/.claude/skills/jetbriefcheck/`):
   - `SKILL.md` — Self-contained Claude Code skill definition (bundles all rules and check definitions inline; works with or without PyMuPDF)
-  - `core/` — Shared analysis engine (PDF extraction, mechanical checks, semantic checks, report builder)
+  - `core/` — Shared analysis engine (PDF extraction, concealed-text scan, mechanical checks, semantic checks, report builder)
   - `scripts/` — CLI scripts for the Claude Code skill workflow (`check_brief.py`, `build_report.py`, `check_rule_freshness.py`)
   - `references/` — Check definitions, rules summary, and bundled rule text
 - **`web/`** — Flask web interface (upload form, report viewer, JSON API)
@@ -244,6 +339,8 @@ python app.py
 ## Skill Deployment (Claude Code CLI)
 
 The Claude Code skill (`/jetbriefcheck`) reads its files from `~/.claude/skills/jetbriefcheck/`. This repo is the single source of truth — `deploy_skill.py` copies the needed files into the skill directory.
+
+If instead you symlink `~/.claude/skills/jetbriefcheck` to this repo's `skill/`, editing the repo updates the live skill with no deploy step. **Do not run `deploy_skill.py` on such a machine** — it removes the symlink and replaces it with a copy, after which repo edits stop taking effect.
 
 ```bash
 python deploy_skill.py

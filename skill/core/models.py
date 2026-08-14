@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:  # pragma: no cover
     from core.citations import CitationReview
+    from core.hidden_text import HiddenTextReview
 
 
 class BriefType(Enum):
@@ -111,6 +112,11 @@ class ComplianceReport:
     # `results` would let it move the recommendation, which is governed by
     # the appellate rules alone.
     citation_review: Optional["CitationReview"] = None
+    # Concealed-content scan, when it ran.  Advisory for the same structural
+    # reason as citation_review: text hidden from a reader is not a violation
+    # of any appellate rule this checker enforces, so it must not move the
+    # recommendation.  Court staff assess what it is.
+    hidden_text_review: Optional["HiddenTextReview"] = None
 
     @property
     def failed_checks(self) -> list[CheckResult]:

@@ -1,4 +1,4 @@
-name: Release with skill ZIP
+name: Release with plugin and skill ZIPs
 
 on:
   release:
@@ -8,25 +8,46 @@ permissions:
   contents: write
 
 jobs:
-  attach-zip:
+  attach-zips:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build jetbriefcheck.zip
+      - name: Read version
+        id: v
         run: |
-          tmp=$(mktemp -d)
-          dest="$tmp/jetbriefcheck"
-          mkdir -p "$dest"
+          echo "version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' skill/version.json | head -1)" >> "$GITHUB_OUTPUT"
 
-          cp -r skill/* "$dest/"
+      # Guard the release rather than the commit: the version lives in three
+      # files and has drifted before (2.4.0 shipped with plugin.json left
+      # behind). A drifted release installs as the wrong version.
+      - name: Check version consistency
+        run: make version-check
 
-          find "$dest" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-          find "$dest" -name '*.pyc' -delete 2>/dev/null || true
+      # Build through the Makefile so CI and a local build cannot diverge.
+      # The old workflow inlined its own zip commands, which is how the local
+      # script's missing `clean` went unnoticed for as long as it did.
+      - name: Build ZIPs
+        run: make package-all
 
-          (cd "$tmp" && zip -r "$GITHUB_WORKSPACE/jetbriefcheck.zip" jetbriefcheck/)
+      - name: Attach ZIPs to release
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "jetbriefcheck-plugin-${{ steps.v.outputs.version }}.zip" \
+            "jetbriefcheck-skill-${{ steps.v.outputs.version }}.zip" \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Attach ZIP to release
-        run: gh release upload "${{ github.event.release.tag_name }}" jetbriefcheck.zip --clobber
+      # gh can exit 0 after silently skipping an asset. Assert both landed.
+      - name: Verify assets attached
+        run: |
+          for f in "jetbriefcheck-plugin-${{ steps.v.outputs.version }}.zip" \
+                   "jetbriefcheck-skill-${{ steps.v.outputs.version }}.zip"; do
+            gh release view "${{ github.event.release.tag_name }}" \
+              --json assets --jq '.assets[].name' | grep -qx "$f" \
+              || { echo "FAIL: $f is not attached"; exit 1; }
+          done
+          echo "both assets verified"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

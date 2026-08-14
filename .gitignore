@@ -4,4 +4,7 @@ __pycache__/
 test-data/
 *.pyc
 jetbriefcheck.zip
+jetbriefcheck-plugin-*.zip
+jetbriefcheck-skill-*.zip
+.build/
 TODO.md

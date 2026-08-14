@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from core.models import BriefMetadata, BriefType, CheckResult, ComplianceReport, Recommendation, Severity
 from core.citations import CitationReview
+from core.hidden_text import HiddenTextReview
 from core.report_builder import build_html_report
 from core.semantic_definitions import SEMANTIC_CHECKS, gated_check_result
 from core.version_check import get_version_stamp
@@ -195,6 +196,11 @@ def main():
     parser.add_argument("--citations", default=None,
                         help="Optional path to citation-grounding JSON. Advisory only; "
                              "never affects the recommendation.")
+    parser.add_argument("--hidden-text", default=None,
+                        help="Path to the concealed-text JSON written by "
+                             "check_brief.py (<stem>-hiddentext.json). Advisory "
+                             "only; never affects the recommendation. Defaults "
+                             "to the sidecar named in the intermediate JSON.")
     parser.add_argument("--reasoning", default=None, help="Optional reasoning text for the report summary")
     parser.add_argument("--pymupdf", action="store_true", default=True, help="PyMuPDF was used for mechanical checks (default)")
     parser.add_argument("--no-pymupdf", action="store_false", dest="pymupdf", help="PyMuPDF was NOT used (fallback mode)")
@@ -248,6 +254,29 @@ def main():
             citation_review = CitationReview.unavailable(
                 f"citation results file not found: {citations_path.name}")
 
+    # Concealed-content scan, loaded after the recommendation is fixed for the
+    # same reason the citation review is: it is reported to staff, not scored.
+    #
+    # The path defaults to the sidecar check_brief.py recorded, so the section
+    # cannot go missing just because the caller forgot a flag. A scan that ran
+    # and found nothing and a scan that never ran say different things, and the
+    # report has to be able to tell them apart.
+    hidden_text_review = None
+    hidden_arg = args.hidden_text or intermediate.get("hidden_text_path")
+    if hidden_arg:
+        hidden_path = Path(hidden_arg)
+        if hidden_path.exists():
+            hidden_text_review = HiddenTextReview.from_dict(
+                json.loads(hidden_path.read_text(encoding="utf-8")))
+        else:
+            print(f"Warning: concealed-text file not found: {hidden_path}",
+                  file=sys.stderr)
+            hidden_text_review = HiddenTextReview.unavailable(
+                f"scan results file not found: {hidden_path.name}")
+    else:
+        hidden_text_review = HiddenTextReview.unavailable(
+            "no concealed-text scan was recorded for this brief")
+
     # Build minimal metadata for the report
     brief_type = BriefType(intermediate["brief_type"])
     metadata = BriefMetadata(
@@ -276,6 +305,7 @@ def main():
         pdf_filename=Path(pdf_path_str).name,
         pymupdf_used=args.pymupdf,
         citation_review=citation_review,
+        hidden_text_review=hidden_text_review,
     )
 
     html = build_html_report(report, version_stamp=get_version_stamp(), model=args.model)
@@ -301,6 +331,10 @@ def main():
         "failed_checks": len(report.failed_checks),
         "passed_checks": len(report.passed_checks),
         "reasoning": reasoning,
+        "hidden_text_findings": (
+            len(hidden_text_review.spans) if hidden_text_review else 0),
+        "hidden_text_scanned": (
+            hidden_text_review.scanned if hidden_text_review else False),
         "failures": [
             {
                 "check_id": r.check_id,

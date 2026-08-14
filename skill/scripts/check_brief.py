@@ -25,6 +25,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from core.brief_classifier import classify_brief
 from core.checks_mechanical import run_mechanical_checks
+from core.hidden_text import redact_concealed, scan_pdf
 from core.models import BriefType
 from core.pdf_extract import extract_brief
 from core.version_check import get_version_warnings
@@ -72,6 +73,30 @@ def main():
     print("Extracting PDF metadata...", file=sys.stderr)
     metadata = extract_brief(pdf_path)
 
+    # Scan for concealed content before any of this document's text is used.
+    # Order matters: extraction returns invisible text exactly as it returns
+    # visible text, so a white-on-white payload is indistinguishable downstream
+    # unless it is identified here first.
+    print("Scanning for concealed text...", file=sys.stderr)
+    hidden_review = scan_pdf(pdf_path)
+    hidden_path = output_dir / f"{pdf_path.stem}-hiddentext.json"
+    hidden_path.write_text(
+        json.dumps(hidden_review.to_dict(), indent=2), encoding="utf-8")
+    if hidden_review.spans:
+        print(f"NOTICE: {len(hidden_review.spans)} concealed passage(s) found on "
+              f"page(s) {', '.join(str(p) for p in hidden_review.pages_affected if p)}. "
+              f"Details: {hidden_path}", file=sys.stderr)
+
+    # Remove concealed passages from the text the later passes read, so the
+    # analysis sees the document a person sees.  The count is reported; the
+    # removed text stays in the sidecar above.
+    metadata.full_text, redacted_count = redact_concealed(
+        metadata.full_text, hidden_review)
+    metadata.cover_text, _ = redact_concealed(metadata.cover_text, hidden_review)
+    if redacted_count:
+        print(f"Removed {redacted_count} concealed passage(s) from the extracted "
+              f"text used for analysis.", file=sys.stderr)
+
     # Classify
     if args.brief_type != "auto":
         metadata.brief_type = BriefType(args.brief_type)
@@ -93,6 +118,14 @@ def main():
             "word_count": metadata.word_count,
             "cover_text": metadata.cover_text,
             "full_text": metadata.full_text,
+            # Redacted by design: locations and sizes, never the concealed text
+            # itself.  Concealed text is routinely an instruction addressed to
+            # whatever reads the document, and this file is read by the model
+            # that writes the analysis.  The text is in the sidecar, which is
+            # for the HTML report and for people.
+            "hidden_text": hidden_review.summary_dict(),
+            "hidden_text_path": str(hidden_path),
+            "hidden_text_redacted_from_full_text": redacted_count,
             "mechanical_results": [
                 {
                     "check_id": r.check_id,
@@ -152,6 +185,7 @@ def main():
         metadata=metadata,
         claude_reasoning=reasoning,
         report_id=uuid.uuid4().hex[:12],
+        hidden_text_review=hidden_review,
     )
 
     html = build_html_report(report, version_stamp=get_version_stamp())
@@ -172,6 +206,8 @@ def main():
         "failed_checks": len(report.failed_checks),
         "passed_checks": len(report.passed_checks),
         "reasoning": report.claude_reasoning,
+        "hidden_text_findings": len(hidden_review.spans),
+        "hidden_text_path": str(hidden_path),
         "failures": [
             {
                 "check_id": r.check_id,

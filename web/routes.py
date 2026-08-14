@@ -21,6 +21,7 @@ from werkzeug.utils import secure_filename
 from core.brief_classifier import classify_brief
 from core.checks_mechanical import run_mechanical_checks
 from core.checks_semantic import run_semantic_checks
+from core.hidden_text import redact_concealed, scan_pdf
 from core.models import BriefType, ComplianceReport
 from core.pdf_extract import extract_brief
 from core.recommender import compute_recommendation
@@ -150,6 +151,14 @@ def _run_analysis(filepath: str, brief_type_override: str | None = None) -> Comp
     # Extract PDF metadata
     metadata = extract_brief(filepath)
 
+    # Scan for concealed text before the brief's own text is used for
+    # anything, and strip what a reader of the page cannot see.  Extraction
+    # returns invisible text exactly as it returns visible text, so on this
+    # path the semantic checks would otherwise be sent a payload verbatim.
+    hidden_review = scan_pdf(filepath)
+    metadata.full_text, _ = redact_concealed(metadata.full_text, hidden_review)
+    metadata.cover_text, _ = redact_concealed(metadata.cover_text, hidden_review)
+
     # Classify brief type
     if brief_type_override and brief_type_override != "auto":
         try:
@@ -178,4 +187,5 @@ def _run_analysis(filepath: str, brief_type_override: str | None = None) -> Comp
         results=all_results,
         metadata=metadata,
         claude_reasoning=reasoning,
+        hidden_text_review=hidden_review,
     )

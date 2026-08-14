@@ -30,6 +30,7 @@ pytest tests/
   - `SKILL.md` — Claude Code skill workflow definition
   - `core/` — Analysis engine:
     - `pdf_extract.py` — Extract text/images, measure formatting via PyMuPDF
+    - `hidden_text.py` — Concealed-content scan (text a machine reads that a person cannot see)
     - `brief_classifier.py` — Detect brief type (appellant, appellee, reply, amicus, petition for rehearing)
     - `checks_mechanical.py` — Paper size, margins, fonts, spacing, page limits
     - `checks_semantic.py` — Required sections, adequate content
@@ -83,6 +84,38 @@ pytest tests/
   "Lucas v. Lucas" at 0.491), and paragraph attribution. Scope is existence + identity + quotation only.
   **Advisory** — a `CitationReview` on `ComplianceReport`, never `CheckResult`s, loaded after the
   recommendation is fixed. When ndlaw is absent, write `"ndlaw_available": false`, never skip the file.
+- **Concealed text** (`core/hidden_text.py`, SKILL.md Phase 1): scans for text a machine reads
+  that a reader of the page cannot see. **Visibility is the trigger; structural signals only
+  explain a finding.** Two independent tests, and both are needed — a *glyph* test (WCAG contrast
+  of the span's colour against the region's modal background, plus opacity) and a *region* test
+  (does any ink appear in the span's bbox at all). Region-ink alone misses a white payload laid
+  over live body text, because the neighbouring words supply the ink; colour alone misses black
+  text covered by a white rectangle. Independent triggers: type below `MIN_LEGIBLE_PT`, and
+  off-page placement.
+  - **Never trigger on invisible render mode by itself.** Every OCR'd scan carries a full
+    render-mode-3 layer over the page image, and that text *is* visible. Three briefs in
+    test-data/ are such scans; triggering on the mode flagged 100% of their spans (21,867 in one).
+    A page whose spans are `OCR_LAYER_PAGE_FRACTION` render-mode-3 is an OCR layer: reported as
+    context, and the sub-legible trigger is suppressed there because OCR assigns nonsense point
+    sizes to specks.
+  - Calibrated over test-data/'s 23 filed briefs (50,735 spans): 22 report nothing; the 23rd is a
+    misassembled scan, flagged `text_layer_unreliable` with its findings **kept** — suppressing
+    them is precisely what an attacker would engineer. `measurement_bbox` excludes whitespace and
+    pads for glyphs that paint outside their box (an underscore does, and unpadded every
+    signature line read as concealed). Findings must clear both `MIN_CONCEALED_CHARS` and
+    `MIN_CONCEALED_ALNUM` **after** adjacent runs are merged, so a payload split per character to
+    duck the floor still reaches it.
+  - **Advisory, like `CitationReview`** — a `HiddenTextReview` on `ComplianceReport`, never
+    `CheckResult`s, loaded in `build_report.py` after the recommendation is fixed. Concealed text
+    violates no rule this checker enforces; court staff assess it. Renders above the compliance
+    findings when found, as a one-line statement of coverage when not. A scan that ran and found
+    nothing and a scan that never ran say different things — `HiddenTextReview.unavailable()`
+    keeps them distinct, and fallback mode (no PyMuPDF) is the latter.
+  - **Payload routing is deliberate.** Full text goes only to `<stem>-hiddentext.json` and the
+    HTML report, both read by people. The intermediate JSON — read by the model writing the
+    analysis — gets `summary_dict()`: locations, counts, digests, no text. Concealed passages and
+    sub-legible type are also stripped from `full_text` by `redact_concealed` before any pass
+    reads it, so the analysis sees the document a person sees. Never widen what reaches the model.
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content

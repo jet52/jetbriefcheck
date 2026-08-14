@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import tempfile
 from datetime import date, timedelta
@@ -77,7 +78,12 @@ class TestLoadLocalVersion:
         assert "rule_hashes" in local_version
 
     def test_returns_expected_version(self, local_version):
-        assert local_version["version"] == "2.4.0"
+        # Shape, not a literal: pinning the number here made this test a
+        # tripwire that fires on every release instead of on a real fault.
+        # Cross-file agreement is what actually matters, and
+        # TestVersionConsistency below checks that.
+        assert local_version["version"].count(".") == 2
+        assert all(part.isdigit() for part in local_version["version"].split("."))
 
     def test_returns_empty_dict_for_missing_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr("core.version_check.VERSION_FILE", tmp_path / "nope.json")
@@ -292,7 +298,7 @@ class TestRemoteVersionCheck:
             messages = check_remote_version(local_version)
             assert len(messages) >= 1
             assert "3.0.0" in messages[0]
-            assert "v2.4.0" in messages[0]
+            assert f"v{local_version['version']}" in messages[0]
 
     def test_check_remote_warns_on_newer_rules(self, local_version):
         remote = dict(local_version)
@@ -417,3 +423,34 @@ class TestReportFooter:
         html = build_html_report(report, version_stamp="")
         assert "&middot;" not in html
         assert "JetBriefCheck</p>" in html
+
+
+# ---------------------------------------------------------------------------
+# Version consistency across the three places it is written
+# ---------------------------------------------------------------------------
+
+class TestVersionConsistency:
+    """The version lives in three files and has drifted more than once.
+
+    `skill/version.json` drives the update check, `skill/SKILL.md` frontmatter
+    drives what the harness reports, and `.claude-plugin/plugin.json` drives a
+    marketplace install. A release that bumps one and forgets another ships a
+    skill that misreports its own version, and the failure is silent — the
+    2.4.0 release left plugin.json behind exactly this way.
+    """
+
+    def _plugin_version(self):
+        path = PROJECT_DIR / ".claude-plugin" / "plugin.json"
+        return json.loads(path.read_text(encoding="utf-8"))["version"]
+
+    def _skill_md_version(self):
+        text = (PROJECT_DIR / "skill" / "SKILL.md").read_text(encoding="utf-8")
+        match = re.search(r"^version:\s*(\S+)\s*$", text, re.MULTILINE)
+        assert match, "SKILL.md frontmatter has no version field"
+        return match.group(1)
+
+    def test_skill_md_matches_version_json(self, local_version):
+        assert self._skill_md_version() == local_version["version"]
+
+    def test_plugin_json_matches_version_json(self, local_version):
+        assert self._plugin_version() == local_version["version"]
