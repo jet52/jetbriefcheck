@@ -26,7 +26,7 @@ def _read_local_version() -> str | None:
     """Read the locally installed version from version.json."""
     version_json = Path(__file__).resolve().parent / "version.json"
     try:
-        data = json.loads(version_json.read_text())
+        data = json.loads(version_json.read_text(encoding="utf-8"))
         return data.get("version")
     except Exception:
         return None
@@ -40,7 +40,7 @@ def _parse_version(v: str) -> tuple[int, ...]:
 def _read_cache() -> dict | None:
     """Read the cached update check result."""
     try:
-        data = json.loads(CACHE_FILE.read_text())
+        data = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
         if time.time() - data.get("checked", 0) < CHECK_INTERVAL:
             return data
     except Exception:
@@ -55,7 +55,7 @@ def _write_cache(remote_version: str) -> None:
         CACHE_FILE.write_text(json.dumps({
             "checked": time.time(),
             "remote_version": remote_version,
-        }))
+        }), encoding="utf-8")
     except Exception:
         pass
 
