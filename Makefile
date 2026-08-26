@@ -6,12 +6,15 @@ VERSION := $(shell sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\
 # wrongly turns a release into a spurious failure.
 PYTHON := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 
+CHECKMODEL_SRC := ../jetredline/skills/jetredline/check_model.py
+CHECKMODEL_DEST := skill/check_model.py
+
 # Plugin archive first in the list because it is how most users install: a
 # Cowork plugin, either from jet-hub or by direct upload of this zip.
 PLUGIN_ZIP := $(SKILL_NAME)-plugin-$(VERSION).zip
 SKILL_ZIP  := $(SKILL_NAME)-skill-$(VERSION).zip
 
-.PHONY: package package-plugin package-all clean test version-check release check-assets
+.PHONY: package package-plugin package-all clean test version-check release check-assets vendor-checkmodel drift-check
 .PHONY: build-plugin build-skill
 
 # Public package targets clean first, then delegate to a build-* recipe.
@@ -50,7 +53,26 @@ clean:
 	rm -f $(SKILL_NAME)-plugin-*.zip $(SKILL_NAME)-skill-*.zip $(SKILL_NAME).zip
 	rm -rf .build
 
-test:
+# The Opus-class model gate. Canonical copy lives in jetredline; every string
+# in it is skill-agnostic so the copies stay byte-identical, which is what lets
+# jetredline's test suite stand as this one's coverage too.
+vendor-checkmodel:
+	@test -f $(CHECKMODEL_SRC) || (echo "FAIL: check_model source not found at $(CHECKMODEL_SRC)" && exit 1)
+	cp $(CHECKMODEL_SRC) $(CHECKMODEL_DEST)
+	@echo "Vendored check_model.py from $(CHECKMODEL_SRC)"
+
+# Fail if a vendored copy has drifted. Tolerant of the canonical repo being
+# absent (e.g. on an install-only machine).
+drift-check:
+	@if [ -f $(CHECKMODEL_SRC) ]; then \
+	  cmp -s $(CHECKMODEL_SRC) $(CHECKMODEL_DEST) || { echo "DRIFT: $(CHECKMODEL_DEST) differs from canonical $(CHECKMODEL_SRC) — run 'make vendor-checkmodel'"; exit 1; }; \
+	  echo "check_model: in sync with canonical."; \
+	else \
+	  echo "check_model: canonical repo not present ($(CHECKMODEL_SRC)); skipping drift check."; \
+	fi
+
+test: drift-check
+	@test -f skill/check_model.py || (echo "FAIL: skill/check_model.py missing — run 'make vendor-checkmodel'" && exit 1)
 	$(PYTHON) -m pytest tests/ -q
 
 # The version lives in three files and has drifted before — the 2.4.0 release

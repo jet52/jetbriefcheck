@@ -51,6 +51,42 @@ VENV_PYTHON=<absolute path>
 
 The user uploads a PDF via drag-and-drop. Save the uploaded file to a temporary location, then execute the phases below.
 
+### Phase 0.0: Model Gate (run before anything else)
+
+jetbriefcheck's reliability was measured on Opus-class models, and its output is a **recommended disposition on a real filing** — Accept, Correction Letter, or Reject. The semantic checks are the model's own reading of a brief against the rules; where a weaker model misreads one, the report still comes out looking complete and the recommendation still looks decided. Confirm the runtime model before any of that runs.
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/check_model.py"
+```
+
+Stdlib only — system `python3`, ahead of the bootstrap and the update check. It prints one line, `MODEL_GATE: <status> model=<id> tier=<family> source=<origin>`, and exits 0 (`ok`), 2 (`warn`), or 3 (`unknown`). **A nonzero exit is the gate firing, not a broken script.**
+
+- **`ok`** — an Opus-, Fable-, or Mythos-class model. Continue to Phase 0 and say nothing about the model; do not mention that the check ran.
+- **`unknown`** — the model could not be detected (no transcript yet, no `$CLAUDE_CODE_SESSION_ID`). Identify yourself from your own system prompt and re-run once with that id — substitute your actual model, do not copy the example:
+  ```bash
+  python3 "${CLAUDE_SKILL_DIR}/check_model.py" --model claude-opus-5
+  ```
+  If it still reports `unknown`, treat it as `warn`.
+- **`warn`** — a Sonnet- or Haiku-class model, or any model name the gate does not recognize. **Stop. Save no file, run no check, until the user answers.**
+
+**On `warn`, ask with `AskUserQuestion`.** Do not pose it rhetorically and proceed.
+
+- **Question:** "jetbriefcheck is running on `<model>`. We strongly recommend Opus for this work — the compliance report ends in a recommended disposition on a real filing, and reliability testing shows Opus-class models read a brief against the rules materially more accurately. How would you like to proceed?"
+- **Header:** "Model"
+- **Options:**
+  1. **Switch to Opus (recommended)** — End here, having done no work. Tell the user to run `/model opus` (or restart with `claude --model opus`) and re-invoke jetbriefcheck.
+  2. **Continue on `<model>`** — Run the full check now, with the caveat recorded in the report. **Supported, not a defect:** Opus is not on every plan, and a compliance check from this model is still worth having — it simply carries a higher miss rate, which the report will say.
+
+If the user continues, say it once when you announce the run and add this line to the report immediately under the recommendation, so a reader who never saw the prompt still sees it:
+
+```
+> **Reduced-reliability model.** This report was generated on [model id], outside the Opus-class set jetbriefcheck's reliability testing is based on. Its semantic checks — and therefore the recommendation above — carry a higher miss rate than the same run on an Opus-class model. Confirm any finding before acting on it.
+```
+
+The mechanical checks are deterministic and unaffected; it is the semantic checks and the recommendation that this caveat is about. Do not repeat the warning on every check.
+
+**Where `AskUserQuestion` is unavailable — headless, or any caller that cannot answer — never block.** State the warning once, add the report line above, and run the full check. A caller that cannot answer a question must still get its report.
+
 ### Phase 0: Update Check and Save the Uploaded PDF
 
 **Update check:** Run `python3 "${CLAUDE_SKILL_DIR}/check_update.py"` silently. If it prints output, include it as a note to the user.
@@ -321,6 +357,8 @@ Produce a structured text report with:
   testing. The mechanical checks and the concealed-text scan are deterministic
   Python and do not vary by model, but the 32 semantic checks in Phase 2 are
   your own reading of the brief, and that is where model capability shows.
+  Phase 0.0 checks this at startup and asks before running on a
+  weaker model — see there for what it does and why it never blocks.
   Fallback mode is entirely model-driven, so the recommendation matters most
   there. The model is recorded in the report footer, which is what makes runs
   comparable across models.

@@ -131,7 +131,9 @@ Once installed, using the skill is straightforward. You upload a PDF of an appel
 
 **Opus is strongly recommended over Sonnet or Haiku.** This is based on initial
 testing rather than a systematic benchmark, but the difference was clear enough
-to be worth stating.
+to be worth stating. jetbriefcheck checks at startup and asks before running on
+a weaker model; continuing is supported — Opus is not on every plan — and the
+report says so when you do.
 
 It helps to know which half of the work the choice affects, because it is not
 the whole report:
