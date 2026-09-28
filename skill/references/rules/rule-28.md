@@ -14,7 +14,7 @@
 
 > (5) a statement of the case briefly indicating the nature of the case, the course of the proceedings, and the disposition below;
 
-> (6) a statement of the facts relevant to the issues submitted for review, which identifies facts in dispute and includes appropriate references to the record (see Rule 28(f) ) ;
+> (6) a statement of the facts relevant to the issues submitted for review, which identifies facts in dispute and includes appropriate references to the record (see paragraph (f)(1));
 
 > (7) the argument, which must contain:
 
@@ -46,7 +46,11 @@
 
 **(e) References to Parties.**  Except as required under Rule 14, counsel should use the parties' actual names or the designations used in the lower court or agency proceeding, or such descriptive terms as "the employee," "the injured person," "the taxpayer," "the purchaser."
 
-**(f) References to the Record.** References to the record must be made as provided by Rule 30.
+**(f) References to the Record; Incorporation by Reference.**
+
+> (1) References to the record must be made as provided by Rule 30.
+
+> (2) A party may not incorporate by reference the contents of a brief filed elsewhere or in another case.
 
 **(g) Reproduction of Statutes, Rules, Regulations, and Other Sources.** If the court's determination of the issues presented requires the study of statutes, rules, regulations, etc., the relevant parts must be set out in the brief or in an addendum at the end of the brief.
 
@@ -60,7 +64,7 @@
 
 > (3) The cross-appellant may file a reply brief confined strictly to the arguments raised in the cross-appeal. This brief is due within 14 days after service of the appellant's reply brief; however, if there is less than 14 days before oral argument, the reply brief must be filed at least 5 days before argument.
 
-**(j) Briefs In a Case Involving Multiple Parties.** Any number of parties may join in a single brief or adopt by reference any part of another's brief. Parties may similarly join in reply briefs.
+**(j) Briefs In a Case Involving Multiple Parties.** Any number of parties may join in a single brief or adopt by reference any part of another party's appellate brief in the case. Parties may similarly join in reply briefs.
 
 **(k) Citation of Supplemental Authorities.** If pertinent and significant authorities come to a party's attention after the party's brief has been filed—or after oral argument but before decision—a party may promptly advise the court by letter, with a copy to all other parties, setting forth the citations. The letter must state without argument the reasons for the supplemental citations, referring either to the page of the brief or to a point argued orally. Any response must be made promptly and must be similarly limited.
 

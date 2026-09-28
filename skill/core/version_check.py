@@ -41,10 +41,10 @@ RULE_URLS = {
 # Effective dates at the time rules were last bundled (update when rules are refreshed)
 BUNDLED_EFFECTIVE_DATES = {
     "rule-14": "2020-03-01",
-    "rule-21": "2022-03-01",
-    "rule-28": "2025-06-01",
+    "rule-21": "2026-09-01",
+    "rule-28": "2026-09-01",
     "rule-29": "2026-07-01",
-    "rule-30": "2023-01-25",
+    "rule-30": "2026-09-01",
     "rule-32": "2024-04-01",
     "rule-34": "2025-09-01",
     "rule-40": "2026-07-01",

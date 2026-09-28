@@ -1,6 +1,6 @@
 ---
 name: jetbriefcheck
-version: 2.6.0
+version: 2.7.0
 description: >-
   Triggers when a user uploads a legal brief PDF for compliance review against the
   North Dakota Rules of Appellate Procedure. Analyzes the brief and produces a
@@ -355,7 +355,7 @@ Produce a structured text report with:
 - No API keys needed — semantic analysis is performed by Claude directly
 - **Model: Opus is strongly recommended over Sonnet or Haiku**, on initial
   testing. The mechanical checks and the concealed-text scan are deterministic
-  Python and do not vary by model, but the 32 semantic checks in Phase 2 are
+  Python and do not vary by model, but the 33 semantic checks in Phase 2 are
   your own reading of the brief, and that is where model capability shows.
   Phase 0.0 checks this at startup and asks before running on a
   weaker model — see there for what it does and why it never blocks.
@@ -449,6 +449,7 @@ Before evaluating, filter checks by brief type:
 - **Appellant + Appellee + Cross-appeal**: REC-002, REC-003
 - **Amicus + Amicus on Rehearing only**: SEC-014, SEC-015 (Rule 29(b)(4) applies paragraph (a)(4) to a rehearing amicus)
 - **Petition for Rehearing only**: RHR-001, RHR-002, RHR-003
+- **Party briefs (Appellant, Appellee, Reply, Cross-appeal, Petition for Rehearing)**: CNT-005
 
 Note: PRV-002–006, WRT-001–003, and CIT-002 are applicable to all brief types but auto-pass when the case type or document type doesn't trigger them (e.g., WRT checks auto-pass if the document is not a writ petition).
 
@@ -518,7 +519,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 ##### SEC-008 — Statement of Facts with Record References
 
-**Rule**: 28(b)(6) — "a statement of the facts relevant to the issues...with appropriate references to the record (see Rule 28(f))"
+**Rule**: 28(b)(6) — "a statement of the facts relevant to the issues...with appropriate references to the record (see paragraph (f)(1))"
 **Look for**: (1) A Statement of Facts section. (2) References to the record — look for citations like "App. 15", "Doc. 23", "(R. 45)", "Tr. 112", appendix references, or similar record citations.
 **Pass if**: Facts section exists AND contains record references.
 **Fail if**: No facts section, OR facts section lacks record references.
@@ -608,10 +609,19 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Note**: Rule 3.4(b)(3)(E) exempts minors who are parties in certain case types (traffic, name change, conservatorship, protection orders). In a standard custody/family law appeal, the children are not parties and the exemption does not apply — initials are required. Be alert to first names appearing in quoted testimony or narrative that inadvertently reveal a minor's identity when initials are used elsewhere.
 **Severity**: CORRECTION
 
+##### CNT-005 — No Incorporation by Reference
+
+**Rule**: 28(f)(2) — "A party may not incorporate by reference the contents of a brief filed elsewhere or in another case." (effective September 1, 2026)
+**Look for**: Language adopting or incorporating arguments from a district court brief, a summary judgment memorandum, a brief in another appeal or case, or another filing below — e.g., "incorporated herein by reference", "adopts the arguments made in its brief to the district court", "for the reasons stated in its summary judgment brief (R45)".
+**Pass if**: The brief makes its arguments itself. The following are not incorporation under (f)(2): joining in or adopting part of another party's appellate brief in this case (Rule 28(j)); an appellant's reply or cross-appeal answer referring to its own principal brief in this appeal (Rule 28(i)(2)); citing a filing below as record evidence of what was argued there, e.g., to show preservation.
+**Fail if**: The brief incorporates by reference the contents of a brief filed in the district court, in another court, or in another case, in place of argument.
+**Note**: Applies to party briefs only; an amicus is not a party. The Explanatory Note's example: "a party may not incorporate by reference an argument made in a summary judgment brief filed in district court."
+**Severity**: CORRECTION
+
 ##### REC-002 — Record Citation Format
 
-**Rule**: 30(b)(1) — record citations must use the format (R{index}:{page}), e.g. (R156:12)
-**Look for**: Whether record references consistently use the (R#:#) format. Note any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead.
+**Rule**: 30(b)(1) — record citations must use the format (R{index}:{page}), e.g. (R156:12); where more than one district court record is cited, the full case number on first reference to each case (54-2020-CV-00012 R19:2), then the case type designator and last four digits (CV-0012 R19:2); "Id." may not be used for record or exhibit citations. Recordings are cited with HH:MM:SS time codes (30(b)(2)), and page numbers are the PDF viewer's sequential page numbers (30(b)(3)).
+**Look for**: Whether record references consistently use the (R#:#) format. Note any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead, and any use of "Id." in place of a record citation.
 **Pass if**: Record citations consistently use the (R#:#) format, or the brief uses a close variant (e.g., [R156:12]).
 **Fail if**: The brief uses non-compliant formats for most record citations (e.g., "App." references, "Doc." references, or bare page numbers).
 **Note**: If the brief uses a mix of formats, note which are non-compliant.
@@ -676,20 +686,20 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 ##### WRT-002 — Writ Petition: Supporting Documents
 
-**Rule**: 21(a)(3) — petition must include supporting documents
-**Look for**: If not a writ petition, pass automatically. If it is, check whether supporting documents (orders, record excerpts) are referenced or attached as exhibits.
-**Pass if**: Not a writ petition, OR supporting documents are included.
-**Fail if**: Writ petition with no supporting documents referenced.
+**Rule**: 21(a)(3) — petition must be accompanied by any document necessary to understand it that is not in the record of a related district court proceeding; such documents must be attached as exhibits (21(a)(3)(B)), and documents already in a related district court record must not be refiled (21(a)(3)(C))
+**Look for**: If not a writ petition, pass automatically. If it is, check whether the supporting documents the petition relies on (orders, opinions, briefs, declarations) are attached as exhibits — or, where there is a related district court proceeding, cited to that record under Rule 30 instead.
+**Pass if**: Not a writ petition, OR the necessary supporting documents are attached as exhibits or properly cited to a related district court record.
+**Fail if**: Writ petition relies on documents that are neither attached as exhibits nor cited to a related district court record, OR refiles as exhibits documents already in a related district court record.
 **Severity**: CORRECTION
 
 ##### WRT-003 — Writ Petition: Exhibit Citation Format
 
-**Rule**: 21(a)(3)(B) — supporting documents should use (E{page}:{line/para}) format
-**Look for**: If not a writ petition, pass automatically. If it is, check whether exhibit citations use the (E#:#) format, e.g. (E6:12:¶3).
-**Pass if**: Not a writ petition, OR exhibit citations use proper format.
-**Fail if**: Writ petition with exhibit citations not using (E#:#) format.
-**Note**: This is advisory — the format is recommended, not strictly required.
-**Severity**: NOTE
+**Rule**: 21(a)(3)(B), (D) — an exhibit must be cited as (E{exhibit number}:{page within exhibit}), e.g. (E6:12), with paragraph or line numbers after the page if applicable, e.g. (E6:12:¶3) or (E6:12:3); the first reference to each exhibit must identify the document by name
+**Look for**: If not a writ petition, pass automatically. If it is, check that (1) exhibit citations use the (E#:#) format with an exhibit number and a page within that exhibit, (2) the first citation of each exhibit names the document (e.g., "Order Denying Motion to Suppress (E6:12)"), and (3) "Id." is not used for exhibit citations (Rule 30(b)(1)).
+**Pass if**: Not a writ petition, OR exhibit citations substantially follow the format and first references name the document.
+**Fail if**: Writ petition whose exhibit citations do not use the (E#:#) format, omit the page, are left as placeholders, or cite exhibits by letter or description alone; or first references do not identify the document.
+**Note**: Before September 1, 2026, this format was permissive ("may refer") and the check was advisory. The amended rule makes it mandatory ("must be cited").
+**Severity**: CORRECTION
 
 ##### RHR-001 — Rehearing: Points Overlooked or Misapprehended
 
@@ -749,7 +759,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 > (5) a statement of the case briefly indicating the nature of the case, the course of the proceedings, and the disposition below;
 
-> (6) a statement of the facts relevant to the issues submitted for review, which identifies facts in dispute and includes appropriate references to the record (see Rule 28(f));
+> (6) a statement of the facts relevant to the issues submitted for review, which identifies facts in dispute and includes appropriate references to the record (see paragraph (f)(1));
 
 > (7) the argument, which must contain:
 
@@ -781,7 +791,11 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 **(e) References to Parties.** Except as required under Rule 14, counsel should use the parties' actual names or the designations used in the lower court or agency proceeding, or such descriptive terms as "the employee," "the injured person," "the taxpayer," "the purchaser."
 
-**(f) References to the Record.** References to the record must be made as provided by Rule 30.
+**(f) References to the Record; Incorporation by Reference.**
+
+> (1) References to the record must be made as provided by Rule 30.
+
+> (2) A party may not incorporate by reference the contents of a brief filed elsewhere or in another case.
 
 **(g) Reproduction of Statutes, Rules, Regulations, and Other Sources.** If the court's determination of the issues presented requires the study of statutes, rules, regulations, etc., the relevant parts must be set out in the brief or in an addendum at the end of the brief.
 
@@ -795,7 +809,7 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 > (3) The cross-appellant may file a reply brief confined strictly to the arguments raised in the cross-appeal. This brief is due within 14 days after service of the appellant's reply brief; however, if there is less than 14 days before oral argument, the reply brief must be filed at least 5 days before argument.
 
-**(j) Briefs In a Case Involving Multiple Parties.** Any number of parties may join in a single brief or adopt by reference any part of another's brief. Parties may similarly join in reply briefs.
+**(j) Briefs In a Case Involving Multiple Parties.** Any number of parties may join in a single brief or adopt by reference any part of another party's appellate brief in the case. Parties may similarly join in reply briefs.
 
 **(k) Citation of Supplemental Authorities.** If pertinent and significant authorities come to a party's attention after the party's brief has been filed—or after oral argument but before decision—a party may promptly advise the court by letter, with a copy to all other parties, setting forth the citations. The letter must state without argument the reasons for the supplemental citations, referring either to the page of the brief or to a point argued orally. Any response must be made promptly and must be similarly limited.
 
@@ -859,9 +873,11 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 **(b) Form of Citation.**
 
-> **(1)** Reference to any material that is contained in an item in the record and that is listed under a register of actions index number, including transcripts, must be made by setting forth in parentheses the capital letter "R" followed by the index number of the item followed by a colon and the specific page within the item where the information referred to is located, for example (R156:12). If applicable, paragraph or line numbers must be included after the page number, for example (R156:12:¶3) or (R156:12:3). Where more than one district court record must be cited, on first reference to the matter include the entire district court case number (54-2020-CV-00012 R19:2), and on subsequent references include only the last four digits (0012 R19:2).
+> **(1)** Reference to any material that is contained in an item in the record and that is listed under a register of actions index number, including transcripts, must be made by setting forth in parentheses the capital letter "R" followed by the index number of the item followed by a colon and the specific page within the item where the information referred to is located, for example (R156:12). If applicable, paragraph or line numbers must be included after the page number, for example (R156:12:¶3) or (R156:12:3). When citing more than one district court record in a document, include the full district court case number on first reference to each case, for example (54-2020-CV-00012 R19:2). On subsequent references to the same case, use only the case type designator and the last four digits, for example (CV-0012 R19:2). "Id." cannot be used for record or exhibit citations.
 
-> **(2)** References to a video or audio recording in the record must be made by identifying the recording and providing specific, time-coded locations of the relevant portions.
+> **(2)** References to video or audio recordings must identify the specific recording and include time-coded locations of the relevant portions in hours, minutes, and seconds (HH:MM:SS), for example (Jury Trial Recording R123 01:23:45).
+
+> **(3)** For electronic documents, page numbers refer to the sequential page number displayed by the PDF viewer, beginning with page 1 for the first page of the document.
 
 ### N.D.R.App.P. 32 — Form of Briefs and Other Documents
 
@@ -1013,11 +1029,15 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 
 > > (D) the reasons why a writ should issue.
 
-> (3) The petition must be accompanied by supporting documents. Supporting documents include any order or opinion, parts of the record, or other documents necessary to understand the matters set forth in the petition.
+> (3) The petition must be accompanied by any document necessary to understand the matters set forth in the petition and not in the record of a related district court proceeding, including any relevant order, opinion, brief, or declaration.
 
 > > (A) If a petition is supported by briefs, declarations, or other documents, they must be served and filed with the petition.
 
-> > (B) Supporting documents must be attached to the petition as exhibits. Any party may refer to an exhibit by setting forth in parentheses the capital letter "E" followed by the page number of the item in the petition followed by a colon and the specific line or paragraph where the information referred to is located, for example (E6:12:¶3).
+> > (B) Supporting documents that are not in the record of a related district court proceeding must be attached to the petition as exhibits. An exhibit must be cited by placing in parentheses the capital letter "E," followed by the exhibit number, a colon, and the page number within the exhibit, for example (E6:12). If applicable, paragraph or line numbers must be included after the page number, for example (E6:12:¶3) or (E6:12:3).
+
+> > (C) Documents in the record of a related district court proceeding must not be refiled as exhibits to the petition. Citations to such documents must comply with Rule 30.
+
+> > (D) On first reference to an exhibit, the citation must identify the document by name, for example "Order Denying Motion to Suppress (E6:12)." On subsequent references, the exhibit citation alone is sufficient, for example (E6:12).
 
 (b) Action; Response to Petition; Briefs.
 

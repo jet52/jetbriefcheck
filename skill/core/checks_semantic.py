@@ -175,6 +175,16 @@ Evaluation guidance:
 - CNT-003: Rule 28(g) requires that if "the court's determination of the issues presented
   requires the study of statutes, rules, regulations, etc., the relevant parts must be set
   out in the brief or in an addendum."
+- CNT-005: Rule 28(f)(2) provides that "a party may not incorporate by reference the contents
+  of a brief filed elsewhere or in another case." Look for language adopting or incorporating
+  arguments from a district court brief, a summary judgment memorandum, a brief in another
+  appeal or case, or a filing below (e.g., "incorporated herein by reference", "adopts the
+  arguments made in its brief to the district court", "for the reasons stated in (R45)").
+  Fail if the brief incorporates such material instead of arguing it. Do not fail for
+  (1) joining or adopting part of another party's appellate brief in this case, which
+  Rule 28(j) permits, (2) an appellant's reply or cross-appeal answer referring to its own
+  principal brief in this appeal, which Rule 28(i)(2) permits, or (3) citing a filing below
+  as record evidence of what was argued there (e.g., to show preservation).
 - REC-002: Rule 30(b)(1) requires record citations in the format (R{{index}}:{{page}}), e.g.
   (R156:12). Check whether record references in the brief consistently use this format. Note
   any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead of the
@@ -220,13 +230,19 @@ Evaluation guidance:
   issue. First determine if this is a writ petition (look for "supervisory writ", "writ of
   mandamus", "writ of prohibition", "extraordinary writ", "petition for writ"). If not a
   writ petition, pass automatically. If it is, check that all four elements are present.
-- WRT-002: Rule 21(a)(3) requires a writ petition to include supporting documents (orders,
-  parts of the record, or other documents necessary to understand the petition). If not a
-  writ petition, pass automatically. If it is, check whether supporting documents are
-  referenced or attached as exhibits.
-- WRT-003: Rule 21(a)(3)(B) specifies that supporting documents should be cited using the
-  format (E{{page}}:{{line/para}}), e.g. (E6:12:¶3). If not a writ petition, pass
-  automatically. If it is, check whether exhibit citations use this format.
+- WRT-002: Rule 21(a)(3) requires a writ petition to be accompanied by any document necessary
+  to understand it that is not in the record of a related district court proceeding (order,
+  opinion, brief, declaration). Those documents must be attached as exhibits (21(a)(3)(B));
+  documents already in a related district court record must not be refiled and are cited under
+  Rule 30 (21(a)(3)(C)). If not a writ petition, pass automatically. If it is, check that the
+  documents the petition relies on are attached as exhibits or cited to the related record.
+- WRT-003: Rule 21(a)(3)(B) requires exhibits to be cited as (E{{exhibit number}}:{{page within
+  exhibit}}), e.g. (E6:12), with paragraph or line numbers after the page if applicable, e.g.
+  (E6:12:¶3). Rule 21(a)(3)(D) requires the first reference to each exhibit to name the
+  document, e.g. "Order Denying Motion to Suppress (E6:12)". Rule 30(b)(1) bars "Id." for
+  exhibit citations. If not a writ petition, pass automatically. If it is, fail when exhibit
+  citations do not follow this format, are left as placeholders, or first references do not
+  identify the document.
 - RHR-001: Rule 40(a)(2) requires the petition to "state with particularity each point of law
   or fact that the petitioner believes the court has overlooked or misapprehended." Look for
   specific identification of points the court allegedly overlooked or misunderstood. The petition

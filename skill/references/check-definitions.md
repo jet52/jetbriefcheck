@@ -44,6 +44,7 @@ Before evaluating, filter checks by brief type:
 - **Appellant + Appellee**: SEC-012
 - **Appellant + Appellee + Cross-appeal**: REC-002, REC-003
 - **Amicus only**: SEC-014, SEC-015
+- **Party briefs (Appellant, Appellee, Reply, Cross-appeal, Petition for Rehearing)**: CNT-005
 
 Note: PRV-002–006, WRT-001–003, and CIT-002 are applicable to all brief types but auto-pass when the case type or document type doesn't trigger them (e.g., WRT checks auto-pass if the document is not a writ petition).
 
@@ -188,9 +189,17 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Note**: Rule 3.4(b)(3)(E) exempts minors who are parties in certain case types (traffic, name change, conservatorship, protection orders). In a standard custody/family law appeal, the children are not parties and the exemption does not apply — initials are required. Be alert to first names appearing in quoted testimony or narrative that inadvertently reveal a minor's identity when initials are used elsewhere.
 **Severity**: CORRECTION
 
+#### CNT-005 — No Incorporation by Reference
+**Rule**: 28(f)(2) — "A party may not incorporate by reference the contents of a brief filed elsewhere or in another case." (effective September 1, 2026)
+**Look for**: Language adopting or incorporating arguments from a district court brief, a summary judgment memorandum, a brief in another appeal or case, or another filing below — e.g., "incorporated herein by reference", "adopts the arguments made in its brief to the district court", "for the reasons stated in its summary judgment brief (R45)".
+**Pass if**: The brief makes its arguments itself. The following are not incorporation under (f)(2): joining in or adopting part of another party's appellate brief in this case (Rule 28(j)); an appellant's reply or cross-appeal answer referring to its own principal brief in this appeal (Rule 28(i)(2)); citing a filing below as record evidence of what was argued there, e.g., to show preservation.
+**Fail if**: The brief incorporates by reference the contents of a brief filed in the district court, in another court, or in another case, in place of argument.
+**Note**: Applies to party briefs only; an amicus is not a party. The Explanatory Note's example: "a party may not incorporate by reference an argument made in a summary judgment brief filed in district court."
+**Severity**: CORRECTION
+
 #### REC-002 — Record Citation Format
-**Rule**: 30(b)(1) — record citations must use the format (R{index}:{page}), e.g. (R156:12)
-**Look for**: Whether record references consistently use the (R#:#) format. Note any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead.
+**Rule**: 30(b)(1) — record citations must use the format (R{index}:{page}), e.g. (R156:12); where more than one district court record is cited, the full case number on first reference to each case (54-2020-CV-00012 R19:2), then the case type designator and last four digits (CV-0012 R19:2); "Id." may not be used for record or exhibit citations. Recordings are cited with HH:MM:SS time codes (30(b)(2)), and page numbers are the PDF viewer's sequential page numbers (30(b)(3)).
+**Look for**: Whether record references consistently use the (R#:#) format. Note any citations that use other formats (e.g., "App. 15", "Doc. 23", "Tr. 45") instead, and any use of "Id." in place of a record citation.
 **Pass if**: Record citations consistently use the (R#:#) format, or the brief uses a close variant (e.g., [R156:12]).
 **Fail if**: The brief uses non-compliant formats for most record citations (e.g., "App." references, "Doc." references, or bare page numbers).
 **Note**: If the brief uses a mix of formats, note which are non-compliant.
@@ -247,19 +256,19 @@ For each applicable check, evaluate as follows. Cross-reference the rule text in
 **Severity**: CORRECTION
 
 #### WRT-002 — Writ Petition: Supporting Documents
-**Rule**: 21(a)(3) — petition must include supporting documents
-**Look for**: If not a writ petition, pass automatically. If it is, check whether supporting documents (orders, record excerpts) are referenced or attached as exhibits.
-**Pass if**: Not a writ petition, OR supporting documents are included.
-**Fail if**: Writ petition with no supporting documents referenced.
+**Rule**: 21(a)(3) — petition must be accompanied by any document necessary to understand it that is not in the record of a related district court proceeding; such documents must be attached as exhibits (21(a)(3)(B)), and documents already in a related district court record must not be refiled (21(a)(3)(C))
+**Look for**: If not a writ petition, pass automatically. If it is, check whether the supporting documents the petition relies on (orders, opinions, briefs, declarations) are attached as exhibits — or, where there is a related district court proceeding, cited to that record under Rule 30 instead.
+**Pass if**: Not a writ petition, OR the necessary supporting documents are attached as exhibits or properly cited to a related district court record.
+**Fail if**: Writ petition relies on documents that are neither attached as exhibits nor cited to a related district court record, OR refiles as exhibits documents already in a related district court record.
 **Severity**: CORRECTION
 
 #### WRT-003 — Writ Petition: Exhibit Citation Format
-**Rule**: 21(a)(3)(B) — supporting documents should use (E{page}:{line/para}) format
-**Look for**: If not a writ petition, pass automatically. If it is, check whether exhibit citations use the (E#:#) format, e.g. (E6:12:¶3).
-**Pass if**: Not a writ petition, OR exhibit citations use proper format.
-**Fail if**: Writ petition with exhibit citations not using (E#:#) format.
-**Note**: This is advisory — the format is recommended, not strictly required.
-**Severity**: NOTE
+**Rule**: 21(a)(3)(B), (D) — an exhibit must be cited as (E{exhibit number}:{page within exhibit}), e.g. (E6:12), with paragraph or line numbers after the page if applicable, e.g. (E6:12:¶3) or (E6:12:3); the first reference to each exhibit must identify the document by name
+**Look for**: If not a writ petition, pass automatically. If it is, check that (1) exhibit citations use the (E#:#) format with an exhibit number and a page within that exhibit, (2) the first citation of each exhibit names the document (e.g., "Order Denying Motion to Suppress (E6:12)"), and (3) "Id." is not used for exhibit citations (Rule 30(b)(1)).
+**Pass if**: Not a writ petition, OR exhibit citations substantially follow the format and first references name the document.
+**Fail if**: Writ petition whose exhibit citations do not use the (E#:#) format, omit the page, are left as placeholders, or cite exhibits by letter or description alone; or first references do not identify the document.
+**Note**: Before September 1, 2026, this format was permissive ("may refer") and the check was advisory. The amended rule makes it mandatory ("must be cited").
+**Severity**: CORRECTION
 
 #### RHR-001 — Rehearing: Points Overlooked or Misapprehended
 **Rule**: 40(a)(2) — "state with particularity each point of law or fact that the petitioner believes the court has overlooked or misapprehended"

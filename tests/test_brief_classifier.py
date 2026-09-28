@@ -1,7 +1,7 @@
 """Brief-type classification from cover text.
 
 Getting this wrong is expensive and quiet.  ``BriefType.UNKNOWN`` is not in
-``PAGE_LIMITS`` and filters out 15 type-gated semantic checks, so a
+``PAGE_LIMITS`` and filters out 16 type-gated semantic checks, so a
 misclassified brief yields a report that is silently missing its Statement
 of Issues, Statement of Facts, Argument and Conclusion checks — with nothing
 in the output saying so.

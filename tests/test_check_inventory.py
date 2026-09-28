@@ -250,11 +250,11 @@ class TestGatedCheckResult:
             assert self._gated(bt).failed is False
 
     def test_unknown_type_gates_every_type_specific_check(self):
-        """All 15 must be reported, none silently dropped."""
+        """All 16 must be reported, none silently dropped."""
         from core.semantic_definitions import gated_check_result
         gated = [c for c in SEMANTIC_CHECKS
                  if c[3] is not None and BriefType.UNKNOWN not in c[3]]
-        assert len(gated) == 15, f"inventory changed: {len(gated)} gated checks"
+        assert len(gated) == 16, f"inventory changed: {len(gated)} gated checks"
         for cid, name, rule, _types, severity, _desc in gated:
             r = gated_check_result(cid, name, rule, severity, BriefType.UNKNOWN)
             assert r.passed is False and r.applicable is False, cid

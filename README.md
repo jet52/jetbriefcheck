@@ -142,7 +142,7 @@ the whole report:
   line spacing, page limits, page numbering), the brief-type classification,
   and the concealed-text scan are deterministic Python measurements over the
   PDF. They produce the same answer on any model.
-- **Model-dependent.** The 32 semantic checks — whether a Table of Contents is
+- **Model-dependent.** The 33 semantic checks — whether a Table of Contents is
   present and adequate, whether the Statement of Issues is really one, whether
   record citations identify their items, whether a conclusion states precise
   relief — are Claude reading the brief and exercising judgment. So is the
@@ -395,7 +395,7 @@ The full text of the following rules is bundled in `skill/references/rules/`:
 | `rule-3.4.md` | N.D.R.Ct. 3.4 | Privacy Protection for Filings |
 | `rule-11.6.md` | N.D.R.Ct. 11.6 | Medium-Neutral Case Citations |
 
-Rules were last verified current against ndcourts.gov on **2026-08-04**.
+Rules were last verified current against ndcourts.gov on **2026-09-28**.
 
 ## Rule Freshness Checking
 

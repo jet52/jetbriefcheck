@@ -72,7 +72,7 @@ pytest tests/
   "respondent - appellant" is an appellant brief. The "brief of X" window takes no closing delimiter —
   `_normalize` collapses newlines, so requiring one silently failed on plain "BRIEF OF APPELLANT".
   `UNKNOWN` is a real outcome, not a bug: the caption names both parties, so with no title line the
-  classifier declines rather than guessing. When the type is UNKNOWN the 15 type-gated semantic checks
+  classifier declines rather than guessing. When the type is UNKNOWN the 16 type-gated semantic checks
   plus PG-001/REC-001 report **not determined**, never "not applicable" — use `gated_check_result`
   (`semantic_definitions.py`), which both execution paths share.
 - **Citation grounding** (`core/citations.py`, SKILL.md Phase 2C): verification is ndlaw `check_draft`

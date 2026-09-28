@@ -14,7 +14,7 @@ Must contain, under appropriate headings and in order:
 3. **Jurisdictional statement** — only for original jurisdiction applications
 4. **Statement of the issues** presented for review
 5. **Statement of the case** — nature, course of proceedings, disposition below
-6. **Statement of the facts** — with appropriate references to the record (Rule 28(f))
+6. **Statement of the facts** — with appropriate references to the record (Rule 28(f)(1))
 7. **Argument**, which must contain:
    - (A) appellant's contentions with citations to authorities and record
    - (B) for each issue:
@@ -60,8 +60,9 @@ Briefs must be concise, presented with accuracy, logically arranged, free from b
 References to evidence or other parts of the record must include a citation to a register of actions index number or recording location. The reference must include information identifying the item (e.g., "Statement of John Doe").
 
 ### (b) Form of Citation
-- **(1)** Record citations must use parenthetical format: (R{index}:{page}), e.g. (R156:12). Paragraph or line numbers follow the page number if applicable, e.g. (R156:12:¶3). Multi-case records require full case number on first reference, then last four digits.
-- **(2)** Audio/video references must identify the recording and provide specific time-coded locations.
+- **(1)** Record citations must use parenthetical format: (R{index}:{page}), e.g. (R156:12). Paragraph or line numbers follow the page number if applicable, e.g. (R156:12:¶3). Multi-case records require the full case number on first reference to each case (54-2020-CV-00012 R19:2), then the case type designator and last four digits (CV-0012 R19:2). "Id." may not be used for record or exhibit citations.
+- **(2)** Audio/video references must identify the specific recording and give time-coded locations in HH:MM:SS, e.g. (Jury Trial Recording R123 01:23:45).
+- **(3)** In electronic documents, page numbers are the PDF viewer's sequential page numbers, starting at 1.
 
 ## Rule 32 — Form of Briefs and Other Documents
 
@@ -130,7 +131,10 @@ Privacy protections in N.D.R.Ct. 3.4, N.D.C.C., and the ND Constitution must be 
 
 ### (a) Petition, Filing, and Service
 - **(2) Required content**: Petition must state (A) relief sought, (B) issues presented, (C) facts necessary to understand the issues, and (D) reasons why a writ should issue.
-- **(3) Supporting documents**: Must include orders, parts of the record, or other documents. Supporting documents attached as exhibits; cited using (E{page}:{line/para}) format, e.g. (E6:12:¶3).
+- **(3) Supporting documents**: Must be accompanied by any document necessary to understand the petition that is not in the record of a related district court proceeding (e.g., order, opinion, brief, declaration).
+  - **(B)** Such documents must be attached as exhibits and cited as (E{exhibit number}:{page within exhibit}), e.g. (E6:12); paragraph or line numbers follow if applicable, e.g. (E6:12:¶3).
+  - **(C)** Documents in a related district court record must not be refiled as exhibits; cite them under Rule 30.
+  - **(D)** The first reference to an exhibit must identify the document by name, e.g. "Order Denying Motion to Suppress (E6:12)."
 
 ### (c) Form
 Petition must contain all applicable items from Rule 28(b) and conform to Rules 25 and 32.

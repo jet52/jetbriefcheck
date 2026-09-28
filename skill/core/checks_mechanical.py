@@ -955,8 +955,12 @@ def _check_record_citations(metadata: BriefMetadata) -> CheckResult:
             "REC-001", "Record Citations Present", "30(a)",
             Severity.NOTE, metadata.brief_type)
 
-    # Look for (R{index}:{page}) pattern per Rule 30(b)(1)
-    record_cites = re.findall(r"\(R\d+:\d+", metadata.full_text)
+    # Look for (R{index}:{page}) per Rule 30(b)(1), including the multi-record
+    # prefixes (54-2020-CV-00012 R19:2) / (CV-0012 R19:2) and the time-coded
+    # recording form (Jury Trial Recording R123 01:23:45) of 30(b)(2)
+    record_cites = re.findall(
+        r"\((?:[^()\n]{0,60}\s)?R\d+(?::\d+|\s\d{1,2}:\d{2}:\d{2})",
+        metadata.full_text)
     count = len(record_cites)
 
     if count > 0:

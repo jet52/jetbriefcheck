@@ -96,6 +96,14 @@ SEMANTIC_CHECKS = [
      None, Severity.NOTE,
      "Pertinent statutes and rules must be set forth in the brief or addendum."),
 
+    # Rule 28(f)(2), effective Sept. 1, 2026: "A party may not incorporate by
+    # reference the contents of a brief filed elsewhere or in another case."
+    # Gated to party briefs — an amicus is not a party.
+    ("CNT-005", "No Incorporation by Reference", "28(f)(2)",
+     [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.REPLY,
+      BriefType.CROSS_APPEAL, BriefType.PETITION_REHEARING], Severity.CORRECTION,
+     "A party may not incorporate by reference a brief filed elsewhere or in another case."),
+
     # Rule 30(b)(1): record citations should use (R{index}:{page}) format
     ("REC-002", "Record Citation Format", "30(b)(1)",
      [BriefType.APPELLANT, BriefType.APPELLEE, BriefType.CROSS_APPEAL], Severity.CORRECTION,
@@ -144,12 +152,12 @@ SEMANTIC_CHECKS = [
     # Rule 21(a)(3): writ petition supporting documents
     ("WRT-002", "Writ Petition: Supporting Documents", "21(a)(3)",
      None, Severity.CORRECTION,
-     "Writ petition must include supporting documents (orders, record)."),
+     "Writ petition must attach necessary documents not in a related district court record as exhibits."),
 
-    # Rule 21(a)(3)(B): exhibit citation format
+    # Rule 21(a)(3)(B), (D): exhibit citation format (mandatory since Sept. 1, 2026)
     ("WRT-003", "Writ Petition: Exhibit Citation Format", "21(a)(3)(B)",
-     None, Severity.NOTE,
-     "Supporting documents should use (E{page}:{line/para}) format."),
+     None, Severity.CORRECTION,
+     "Exhibits must be cited as (E{exhibit}:{page}), naming the document on first reference."),
 
     # Rule 40(a)(2): petition for rehearing must state overlooked/misapprehended points
     ("RHR-001", "Rehearing: Points Overlooked or Misapprehended", "40(a)(2)",

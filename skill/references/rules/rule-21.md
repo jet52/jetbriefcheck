@@ -14,11 +14,15 @@
 
 > > (D) the reasons why a writ should issue.
 
-> (3) The petition must be accompanied by supporting documents. Supporting documents include any order or opinion, parts of the record, or other documents necessary to understand the matters set forth in the petition.
+> (3) The petition must be accompanied by any document necessary to understand the matters set forth in the petition and not in the record of a related district court proceeding, including any relevant order, opinion, brief, or declaration.
 
 > > (A) If a petition is supported by briefs, declarations, or other documents, they must be served and filed with the petition.
 
-> > (B) Supporting documents must be attached to the petition as exhibits. Any party may refer to an exhibit by setting forth in parentheses the capital letter “E” followed by the page number of the item in the petition followed by a colon and the specific line or paragraph where the information referred to is located, for example (E6:12:¶3).
+> > (B) Supporting documents that are not in the record of a related district court proceeding must be attached to the petition as exhibits. An exhibit must be cited by placing in parentheses the capital letter “E,” followed by the exhibit number, a colon, and the page number within the exhibit, for example (E6:12). If applicable, paragraph or line numbers must be included after the page number, for example (E6:12:¶3) or (E6:12:3).
+
+> > (C) Documents in the record of a related district court proceeding must not be refiled as exhibits to the petition. Citations to such documents must comply with Rule 30.
+
+> > (D) On first reference to an exhibit, the citation must identify the document by name, for example “Order Denying Motion to Suppress (E6:12).” On subsequent references, the exhibit citation alone is sufficient, for example (E6:12).
 
 (b) Action; Response to Petition; Briefs.
 
