@@ -199,7 +199,7 @@ def gated_check_result(
     * **Not determined.** The brief type is UNKNOWN, so the check was
       skipped for want of a classification, not because it does not apply.
       A brief does not stop needing a Statement of Issues because the cover
-      could not be read. Ten checks are gated this way, three of them at
+      could not be read. Sixteen checks are gated this way, six of them at
       REJECT severity, so labelling them "not applicable" tells the reader
       they were correctly excluded when they were never run.
 

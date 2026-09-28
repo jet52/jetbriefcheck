@@ -221,8 +221,6 @@ The HTML report has several sections:
 
 - **Not Applicable / Not Determined** — two different things, both kept out of the recommendation. *Not applicable* means the check does not reach this brief type (amicus checks on an appellant brief). *Not determined* means the requirement is real but was never verified — the checker could not reach it, so it is unverified, not satisfied. **COV-001** (cover color) always lands here: Rule 32(a)(2) governs the physical cover, which a PDF does not record, so it needs a human eye on every brief. Others arrive here situationally — line spacing measurable on too few pages, a footer that cannot be read, a semantic check that returned no result.
 
-- **Not Applicable** — checks that don't apply to this brief type (e.g., amicus-specific checks on an appellant brief).
-
 Each failed check shows:
 - A **check ID** (e.g., FMT-006) for reference.
 - The **rule citation** (e.g., Rule 32(a)(5)), linked to the official rule text on ndcourts.gov.
@@ -288,6 +286,10 @@ Each failed check shows:
 | Reply | Reply to the appellee's brief | 12 pages |
 | Cross-Appeal | Brief when both parties appeal | 38 pages |
 | Amicus Curiae | "Friend of the court" brief | 19 pages |
+| Amicus on Rehearing | Amicus brief on whether to grant rehearing (Rule 29(b)) | 10 pages |
+| Petition for Rehearing | Petition asking the Court to rehear a decided case (Rule 40) | 10 pages |
+
+Writ petitions under Rule 21 have no type of their own and are reported as unknown. Rule 21(c) requires a petition to contain the applicable Rule 28(b) items, so check one as an appellant brief for the closest coverage; the WRT checks carry the Rule 21 requirements, and the appellant-only page limit, cover color, and record-citation results should be read with that in mind.
 
 ### What Rules Are Checked
 
@@ -295,12 +297,13 @@ The checker evaluates compliance against these North Dakota rules:
 
 **N.D.R.App.P. (Rules of Appellate Procedure):**
 - **Rule 14** — Identity protection (initials for protected individuals)
-- **Rule 21** — Writs (petition content and supporting documents)
-- **Rule 28** — Required contents of briefs (sections, formatting of arguments, etc.)
+- **Rule 21** — Writs (petition content, supporting documents, and exhibit citations)
+- **Rule 28** — Required contents of briefs (sections, formatting of arguments, no incorporation by reference, etc.)
 - **Rule 29** — Requirements for amicus curiae briefs
 - **Rule 30** — How to cite the record
 - **Rule 32** — Physical formatting (paper size, margins, fonts, spacing, page limits, cover requirements)
 - **Rule 34** — Oral argument notation on the cover
+- **Rule 40** — Petitions for rehearing (content and length)
 
 **N.D.R.Ct. (Rules of Court):**
 - **Rule 3.4** — Privacy protection for personal identifiers in filings
@@ -311,8 +314,9 @@ The checker evaluates compliance against these North Dakota rules:
 ## Developer Quick Start
 
 ```bash
-# Set up the virtual environment
-uv venv && uv pip install -r skill/requirements.txt
+# Set up the virtual environment. skill/requirements.txt is what the deployed
+# skill needs (PyMuPDF only); the test suite and web app also need the rest.
+uv venv && uv pip install -r skill/requirements.txt pytest anthropic flask
 source .venv/bin/activate
 
 # Deploy the Claude Code skill (COPIES skill/ into ~/.claude/skills/jetbriefcheck/).
@@ -411,7 +415,12 @@ To force a live check (bypassing the cache):
 python3 skill/scripts/check_rule_freshness.py
 ```
 
-When a rule is flagged as stale, update the bundled `.md` file, update `BUNDLED_EFFECTIVE_DATES` in `skill/core/version_check.py`, recompute hashes in `skill/version.json`, and bump `rules_verified`.
+When a rule is flagged as stale:
+
+1. Update the bundled `.md` file in `skill/references/rules/` **and** the copy bundled inline in `skill/SKILL.md` — the zip install reads only the latter.
+2. Update any check guidance the amendment touches: `skill/SKILL.md`, `skill/references/check-definitions.md`, `skill/references/rules-summary.md`, the API-path prompt in `skill/core/checks_semantic.py`, and `skill/core/semantic_definitions.py`.
+3. Update `BUNDLED_EFFECTIVE_DATES` in `skill/core/version_check.py`, recompute the hashes and bump `rules_verified` in `skill/version.json`, and update the date above.
+4. Bump the version so existing installs are prompted to update, then run `python3 skill/scripts/check_rule_freshness.py` to confirm every rule reports current.
 
 ## Contributing
 

@@ -365,25 +365,21 @@ Produce a structured text report with:
 
 ## Known Issues
 
-Based on testing across 13 briefs (Feb 2026):
+Calibrated against a sample of 23 filed briefs. When reporting results, pass these caveats on to the user where they apply:
 
-### Mechanical Check False Positives
+### Mechanical Checks
 
-Two mechanical checks have high false-positive rates. When reporting results, note these caveats to the user:
-
-- **FMT-006 (Font Size)**: Measures the minimum font found anywhere in the PDF. Small fonts in page numbers, headers, footers, superscripts, or PDF artifacts trigger REJECT even when the body text is properly 12pt. If this is the sole REJECT trigger and the reported minimum is 8-11pt, flag it as a likely false positive.
-- **FMT-005 (Bottom Margin)**: Page numbers at the bottom are measured as content in the margin zone. Nearly always triggers.
-
-**Fixed (v1.6.0):** FMT-009 (Spacing) previously only measured intra-block line gaps, missing PDFs that encode each line as a separate text block. Now also measures inter-block baseline distances, which correctly detects double spacing in these PDFs.
+- **FMT-006 (Font Size)**: Page numbers, footnote markers, superscripts, and small caps are classified separately from body text; when only those are undersized, the severity drops to a note. Read the headline before acting: *document-wide undersize* (the predominant size itself is below 12pt) means the body type is small throughout — reset or rescale the brief — while *localized* small type means scattered spans. A REJECT resting on a small body-character count deserves an eyeball; the per-page breakdown shows how many characters are involved.
+- **FMT-005 (Bottom Margin)**: Page-number footers in the bottom 10% of the page are excluded from the margin (bare numerals, roman numerals, "Page 5 of 25" and similar). A footer carrying anything more — a caption, a docket number — is content and still counts, which is intended. A page number sitting just above the bottom-10% line is measured as body text.
+- **FMT-009 (Spacing)**: Failures are usually real. The check reports **undetermined** when fewer than half the body pages yield a measurement, and lists single-spaced passages without scoring them — Rule 32(a)(5) permits single-spaced headings and quotations.
 
 ### Brief Type Auto-Detection
 
-The `--brief-type auto` flag frequently returns "unknown", especially for appellee briefs. If auto-detection fails, re-run Phase 1 with an explicit `--brief-type` flag based on the cover page text.
+Auto-detection reads the cover's title line ("BRIEF OF APPELLANT") and resolves compound designations ("RESPONDENT – APPELLANT") by the trailing appellate role. When the cover has no title line it returns "unknown" rather than guessing from the caption, and the type-specific checks report *not determined*. Re-run Phase 1 with an explicit `--brief-type` based on the cover.
 
-### Detection Variants
+### Writ Petitions
 
-- **COV-002 (Oral Argument)**: Misses "REQUEST FOR ORAL ARGUMENT" — only matches "ORAL ARGUMENT REQUESTED".
-- **SEC-013 (Certificate of Compliance)**: Misses "CERTIFICATION OF COMPLIANCE" variant.
+A petition for a writ under Rule 21 has no brief type of its own and classifies as "unknown". Rule 21(c) requires a petition to contain the applicable Rule 28(b) items, so run it with `--brief-type appellant` for the closest coverage, and tell the user you did. Then read the results with that in mind: PG-001's 38-page limit, COV-001's blue cover, and REC-001's (R#:#) citations are appellant-brief requirements that may not bind an original petition with no record below, and SEC-011 (preservation) has nothing to attach to. The WRT checks carry the Rule 21 requirements.
 
 ### Non-Appellate Briefs
 

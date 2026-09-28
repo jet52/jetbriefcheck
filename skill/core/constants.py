@@ -106,7 +106,7 @@ SECTION_PATTERNS = {
     "argument": r"(?i)^argument\b|\bargument\s*$",
     "standard_of_review": r"(?i)standard\s+of\s+review",
     "conclusion": r"(?i)^conclusion\b|\bconclusion\s*$",
-    "certificate_of_compliance": r"(?i)certificate\s+of\s+compliance",
+    "certificate_of_compliance": r"(?i)certificat(?:e|ion)\s+of\s+compliance",
     "addendum": r"(?i)^addendum\b|\baddendum\s*$",
 }
 

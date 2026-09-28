@@ -51,7 +51,7 @@ Note: PRV-002–006, WRT-001–003, and CIT-002 are applicable to all brief type
 If a check does not reach this brief, distinguish two cases:
 
 - **Brief type known, check does not apply** — `"passed": true, "applicable": false`, message "Not applicable to {brief_type} briefs."
-- **Brief type is `unknown`** — `"passed": false, "applicable": false`, message "Not determined — brief type could not be identified, so this type-specific check was not run." Ten checks are gated on brief type, three of them at REJECT severity (SEC-006, SEC-008, SEC-009); calling them "not applicable" would tell the reader they were correctly excluded when they were never run.
+- **Brief type is `unknown`** — `"passed": false, "applicable": false`, message "Not determined — brief type could not be identified, so this type-specific check was not run." Sixteen checks are gated on brief type, six of them at REJECT severity (SEC-006, SEC-008, SEC-009, SEC-014, RHR-001, RHR-003); calling them "not applicable" would tell the reader they were correctly excluded when they were never run.
 
 ### Evaluation Guidance
 

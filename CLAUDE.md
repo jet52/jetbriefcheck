@@ -9,8 +9,8 @@ Checks appellate brief PDFs for compliance with North Dakota Rules of Appellate 
 ## Commands
 
 ```bash
-# Setup
-uv venv && uv pip install -r skill/requirements.txt
+# Setup (skill/requirements.txt is PyMuPDF only; tests and the web app need the rest)
+uv venv && uv pip install -r skill/requirements.txt pytest anthropic flask
 source .venv/bin/activate
 
 # Run web interface
@@ -19,8 +19,11 @@ python app.py
 # Deploy as Claude Code skill
 python deploy_skill.py
 
-# Run tests
-pytest tests/
+# Run tests (also checks the vendored check_model.py for drift)
+make test
+
+# Confirm bundled rules are current against ndcourts.gov (bypasses the 90-day cache)
+python3 skill/scripts/check_rule_freshness.py
 ```
 
 ## Architecture
@@ -31,7 +34,7 @@ pytest tests/
   - `core/` — Analysis engine:
     - `pdf_extract.py` — Extract text/images, measure formatting via PyMuPDF
     - `hidden_text.py` — Concealed-content scan (text a machine reads that a person cannot see)
-    - `brief_classifier.py` — Detect brief type (appellant, appellee, reply, amicus, petition for rehearing)
+    - `brief_classifier.py` — Detect brief type (appellant, appellee, reply, cross-appeal, amicus, amicus on rehearing, petition for rehearing; writ petitions have no type and classify UNKNOWN)
     - `checks_mechanical.py` — Paper size, margins, fonts, spacing, page limits
     - `checks_semantic.py` — Required sections, adequate content
     - `report_builder.py` — Generate HTML compliance report
@@ -119,4 +122,8 @@ pytest tests/
 - Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
 - Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
   `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content
-- Skill deploys to `~/.claude/skills/jetbriefcheck/`
+- Distribution: primarily a plugin via the jet-hub marketplace, which pins to the latest **published GitHub
+  release** — pushing `main` ships nothing; `make release` tags, publishes, and verifies the zips. The standalone
+  skill zip and `deploy_skill.py` (copies `skill/` to `~/.claude/skills/jetbriefcheck/`) remain supported.
+- **Rule amendments** touch more than the rule file: the inline copy in `SKILL.md`, the check guidance, the
+  effective dates and hashes, and the version. README "Rule Freshness Checking" has the checklist.

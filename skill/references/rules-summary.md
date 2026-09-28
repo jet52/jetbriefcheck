@@ -32,11 +32,18 @@ Must contain TOC with paragraph references and TOA with paragraph references.
 ### (e) References to Parties
 Counsel should use parties' actual names or lower court designations, not procedural labels.
 
+### (f) References to the Record; Incorporation by Reference
+- **(1)** References to the record must be made as provided by Rule 30.
+- **(2)** A party may not incorporate by reference the contents of a brief filed elsewhere or in another case (e.g., an argument from a summary judgment brief filed in district court).
+
 ### (g) Reproduction of Statutes/Rules
 If the court's determination requires study of statutes, rules, regulations, etc., relevant parts must be set out in the brief or in an addendum.
 
 ### (h) Oral Argument Requested
 Party desiring oral argument must place "ORAL ARGUMENT REQUESTED" conspicuously on the cover page.
+
+### (j) Multiple Parties
+Any number of parties may join in a single brief or adopt by reference any part of another party's appellate brief in the case.
 
 ### (l) Requirements
 Briefs must be concise, presented with accuracy, logically arranged, free from burdensome, irrelevant or immaterial matters.

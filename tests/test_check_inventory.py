@@ -278,3 +278,16 @@ class TestGatedCheckResult:
         r = _check_record_citations(BriefMetadata(brief_type=BriefType.AMICUS))
         assert r.passed is True and r.applicable is False
         assert "not applicable" in r.message.lower()
+
+
+@pytest.mark.parametrize("heading", [
+    "CERTIFICATE OF COMPLIANCE",
+    "CERTIFICATION OF COMPLIANCE",
+    "Certificate of Compliance",
+])
+def test_certificate_of_compliance_variants_detected(heading):
+    """SEC-013 once missed the "CERTIFICATION OF COMPLIANCE" variant."""
+    from core.checks_mechanical import _check_certificate_of_compliance
+    m = BriefMetadata()
+    m.full_text = f"...\n{heading}\nThis brief complies with the page limitation.\n"
+    assert _check_certificate_of_compliance(m).passed
