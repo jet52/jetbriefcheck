@@ -25,6 +25,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 from core.models import BriefMetadata, BriefType, CheckResult, ComplianceReport, Recommendation, Severity
 from core.citations import CitationReview
 from core.hidden_text import HiddenTextReview
+from core.recommender import compute_recommendation
 from core.report_builder import build_html_report
 from core.semantic_definitions import SEMANTIC_CHECKS, gated_check_result
 from core.version_check import get_version_stamp
@@ -69,31 +70,6 @@ def _parse_results(items: list[dict]) -> list[CheckResult]:
             pages=pages,
         ))
     return results
-
-
-def _hard_rule_recommendation(results: list[CheckResult]) -> tuple[Recommendation, str]:
-    """Determine recommendation from severity levels (no API call)."""
-    failed = [r for r in results if r.failed]
-    has_reject = any(r.severity == Severity.REJECT for r in failed)
-    has_correction = any(r.severity == Severity.CORRECTION for r in failed)
-
-    if has_reject:
-        reject_checks = [r for r in failed if r.severity == Severity.REJECT]
-        reasoning = (
-            f"REJECT due to {len(reject_checks)} critical failure(s): "
-            + "; ".join(f"{r.check_id} ({r.name})" for r in reject_checks)
-        )
-        return Recommendation.REJECT, reasoning
-
-    if has_correction:
-        correction_checks = [r for r in failed if r.severity == Severity.CORRECTION]
-        reasoning = (
-            f"Correction letter recommended due to {len(correction_checks)} issue(s): "
-            + "; ".join(f"{r.check_id} ({r.name})" for r in correction_checks)
-        )
-        return Recommendation.CORRECTION_LETTER, reasoning
-
-    return Recommendation.ACCEPT, "All checks passed."
 
 
 def _extract_case_info(cover_text: str, pdf_path: str) -> tuple[str, str, str]:
@@ -232,15 +208,12 @@ def main():
     # Merge all results
     all_results = mech_results + sem_results
 
-    # Hard-rule recommendation (no API)
-    recommendation, reasoning = _hard_rule_recommendation(all_results)
-
-    # Use caller-provided reasoning if available
-    if args.reasoning:
-        reasoning = args.reasoning
+    # Hard-rule recommendation. Caller-provided reasoning replaces the summary;
+    # undetermined checks are disclosed either way.
+    recommendation, reasoning = compute_recommendation(all_results, args.reasoning)
 
     # Citation grounding, loaded only after the recommendation is fixed. It is
-    # advisory chambers intel and must not reach _hard_rule_recommendation;
+    # advisory chambers intel and must not reach compute_recommendation;
     # loading it here makes that structural rather than a matter of care.
     citation_review = None
     if args.citations:

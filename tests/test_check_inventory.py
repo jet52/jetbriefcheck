@@ -27,7 +27,7 @@ import pytest
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR / "skill"))
 
-from core.checks_semantic import SEMANTIC_CHECKS
+from core.semantic_definitions import SEMANTIC_CHECKS
 from core.models import (
     BriefMetadata,
     BriefType,
@@ -204,7 +204,7 @@ class TestUndeterminableChecks:
         from core.recommender import compute_recommendation
         meta = BriefMetadata(brief_type=BriefType.APPELLANT)
         results = [_check_cover_color(meta)]
-        rec, reasoning = compute_recommendation(results, use_claude_weighting=False)
+        rec, reasoning = compute_recommendation(results)
         assert rec == Recommendation.ACCEPT
         # ...but the reader is told what was never verified
         assert "COV-001" in reasoning

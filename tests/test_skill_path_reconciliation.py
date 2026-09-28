@@ -1,14 +1,9 @@
 """The skill execution path: semantic results written by Claude, not the API.
 
-Two execution paths exist and they are easy to conflate:
-
-* **Skill path** (SKILL.md) — "You (Claude) perform the semantic analysis
-  directly — no API call needed."  The assistant writes
-  ``<stem>-semantic.json`` and ``build_report.py`` merges it.  This is how
-  the skill runs under a Claude subscription, and it never imports
-  ``anthropic`` — which is not in ``skill/requirements.txt``.
-* **API path** (``core.checks_semantic``) — used by the Flask app and the
-  CLI with a key.
+SKILL.md has Claude perform the semantic analysis directly in the session.
+The assistant writes ``<stem>-semantic.json`` and ``build_report.py`` merges
+it.  This is how the skill runs under a Claude subscription, and nothing in
+it imports ``anthropic`` — which is not a dependency at all.
 
 SKILL.md requires every semantic check to appear in the JSON, but nothing
 enforced it.  A check omitted from the JSON vanished from the report
@@ -105,11 +100,6 @@ class TestSkillPathHasNoAnthropicDependency:
         assert r.returncode == 0, r.stderr
         assert "ok" in r.stdout
 
-    def test_definitions_are_shared_with_the_api_path(self):
-        """One inventory, so the two paths cannot disagree about what exists."""
-        from core.checks_semantic import SEMANTIC_CHECKS as api_side
-        assert api_side is SEMANTIC_CHECKS
-
 
 class TestMissingSemanticResults:
 
@@ -153,7 +143,7 @@ class TestMissingSemanticResults:
     def test_undetermined_checks_do_not_change_the_recommendation(self):
         """An empty semantic JSON must not manufacture failures either."""
         filled = build_report._missing_semantic_results([], BriefType.APPELLANT)
-        rec, _ = build_report._hard_rule_recommendation(filled)
+        rec, _ = build_report.compute_recommendation(filled)
         assert rec.value == "accept", (
             "undetermined checks must not count as findings"
         )
@@ -161,6 +151,6 @@ class TestMissingSemanticResults:
     def test_reported_failure_still_drives_the_recommendation(self):
         reported = [_result("PRV-001", passed=False)]
         filled = build_report._missing_semantic_results(reported, BriefType.APPELLANT)
-        rec, reasoning = build_report._hard_rule_recommendation(reported + filled)
+        rec, reasoning = build_report.compute_recommendation(reported + filled)
         assert rec.value == "correction_letter"
         assert "PRV-001" in reasoning

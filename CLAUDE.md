@@ -4,17 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Checks appellate brief PDFs for compliance with North Dakota Rules of Appellate Procedure. Analyzes formatting (margins, fonts, spacing, page limits) and semantic content (required sections). Produces HTML compliance reports with recommendations: Accept, Correction Letter, or Reject. Also deployable as a Claude Code skill.
+Checks appellate brief PDFs for compliance with North Dakota Rules of Appellate Procedure. Analyzes formatting (margins, fonts, spacing, page limits) and semantic content (required sections). Produces HTML compliance reports with recommendations: Accept, Correction Letter, or Reject. Runs as a Claude skill (Claude Code and Cowork) under the user's subscription; there is no API-key path and no web app.
 
 ## Commands
 
 ```bash
-# Setup (skill/requirements.txt is PyMuPDF only; tests and the web app need the rest)
-uv venv && uv pip install -r skill/requirements.txt pytest anthropic flask
+# Setup (skill/requirements.txt is PyMuPDF only; tests also need pytest)
+uv venv && uv pip install -r skill/requirements.txt pytest
 source .venv/bin/activate
-
-# Run web interface
-python app.py
 
 # Deploy as Claude Code skill
 python deploy_skill.py
@@ -28,7 +25,6 @@ python3 skill/scripts/check_rule_freshness.py
 
 ## Architecture
 
-- **`app.py`** — Flask entry point (web interface)
 - **`skill/`** — Deployable skill content (symlinked to `~/.claude/skills/jetbriefcheck/`):
   - `SKILL.md` — Claude Code skill workflow definition
   - `core/` — Analysis engine:
@@ -36,29 +32,30 @@ python3 skill/scripts/check_rule_freshness.py
     - `hidden_text.py` — Concealed-content scan (text a machine reads that a person cannot see)
     - `brief_classifier.py` — Detect brief type (appellant, appellee, reply, cross-appeal, amicus, amicus on rehearing, petition for rehearing; writ petitions have no type and classify UNKNOWN)
     - `checks_mechanical.py` — Paper size, margins, fonts, spacing, page limits
-    - `checks_semantic.py` — Required sections, adequate content
+    - `semantic_definitions.py` — Inventory of the semantic checks Claude evaluates (pure data)
     - `report_builder.py` — Generate HTML compliance report
     - `models.py` — Data structures for checks and results
-    - `recommender.py` — Accept/Correction Letter/Reject determination
+    - `recommender.py` — Accept/Correction Letter/Reject by hard rules; names undetermined checks in the reasoning
   - `scripts/` — CLI entry points for skill pipeline
   - `references/rules/` — Bundled rule text: N.D.R.App.P. 14, 21, 28, 29, 30, 32, 34, 40; N.D.R.Ct. 3.4, 11.6
-- **`web/`** — Flask templates and static assets
 
 ## Key Details
 
 - Python 3.9+, PyMuPDF >= 1.24.0
-- Optional Anthropic API key for AI-enhanced analysis
 - Measurement pitfalls (see README "Known measurement pitfalls" for detail):
   - **FMT-006 font size** — splits document-wide undersize (predominant size itself below 12pt) from scattered spans; leading/font ratio rules *out* page scaling but cannot prove it (see `_explain_document_wide_undersize`). Headers/footers/superscripts/small caps are categorized and downgraded already
   - **FMT-009 line spacing** — measured across split blocks since v1.6.0; failures are usually real. Reports measurement coverage, and returns **undetermined** below `MIN_SPACING_COVERAGE_PCT` (50%) instead of the old "assumed compliant". Also counts single-spaced runs (`_find_single_spaced_runs`) and reports them **without scoring** — Rule 32(a)(5) permits single-spaced headings and quotations, so a run is evidence, not a finding; never wire these into the verdict
   - **FMT-005 / FMT-011 / FMT-012** — share one page-number footer recognizer (`_page_number_value` in `pdf_extract.py`), but two zones: `_MARGIN_FOOTER_ZONE` (0.90) for what may sit inside the bottom margin, `_PAGE_NUMBER_ZONE` (0.85) for what counts as numbering. FMT-011/012 report **undetermined** (`applicable=False`, so it cannot drive the recommendation) when the footer holds an image or unreadable text — never "unnumbered"
-- **Two execution paths for semantic checks — don't conflate them.**
-  - *Skill path* (how it runs under a Claude subscription): SKILL.md has Claude evaluate the
-    checks directly and write `<stem>-semantic.json`; `build_report.py` merges it. **No API
-    key, and `anthropic` is not installed** — `skill/requirements.txt` is PyMuPDF only, so
-    nothing on this path may import `checks_semantic`. Shared check definitions live in
-    `core/semantic_definitions.py` (pure data) for exactly this reason.
-  - *API path* (Flask app, CLI with a key): `core/checks_semantic.run_semantic_checks`.
+- **Semantic checks run in the session, never through the API.** SKILL.md has Claude evaluate
+  the checks directly and write `<stem>-semantic.json`; `build_report.py` merges it with the
+  intermediate JSON from `check_brief.py`. The Flask web app, the Anthropic-API semantic path
+  (`checks_semantic.py`), and the model "weighting" pass in the recommender were removed in 2.8.0
+  so the check guidance lives in one place (SKILL.md / check-definitions.md) and nothing needs an
+  API key. Do not reintroduce an `anthropic` import: `skill/requirements.txt` is PyMuPDF only, and
+  `test_skill_path_reconciliation.py` guards it. For batch or unattended runs, drive the skill
+  headlessly with `claude -p` rather than adding an API client.
+- The recommendation is **hard rules only** (`core/recommender.py`, used by `build_report.py`):
+  same findings, same result. Undetermined checks never drive it, but are named in the reasoning.
 - **COV-001** (cover color) is *structurally* undeterminable — Rule 32(a)(2) governs the physical cover,
   which a PDF does not record. It reports undetermined on every brief and must never be marked passed; the
   message still names the required color so the manual check is actionable.
@@ -119,9 +116,9 @@ python3 skill/scripts/check_rule_freshness.py
     analysis — gets `summary_dict()`: locations, counts, digests, no text. Concealed passages and
     sub-legible type are also stripped from `full_text` by `redact_concealed` before any pass
     reads it, so the analysis sees the document a person sees. Never widen what reaches the model.
-- Test data in `test-data/` (~76 sample PDFs; 23 are briefs, the rest generated reports)
-- Live API tests are opt-in: `JETBRIEFCHECK_LIVE_API=1 pytest -k Live` (needs
-  `ANTHROPIC_API_KEY`); they use fabricated brief text, never real case content
+- Test data in `test-data/` (gitignored; 23 filed briefs, 2 synthetic hidden-text fixtures, and
+  generated reports and JSON). Several tests read it; `check_brief.py` writes its JSON next to
+  the PDF unless given `--output-dir`, so point that elsewhere to keep the stored JSON intact
 - Distribution: primarily a plugin via the jet-hub marketplace, which pins to the latest **published GitHub
   release** — pushing `main` ships nothing; `make release` tags, publishes, and verifies the zips. The standalone
   skill zip and `deploy_skill.py` (copies `skill/` to `~/.claude/skills/jetbriefcheck/`) remain supported.

@@ -315,8 +315,8 @@ The checker evaluates compliance against these North Dakota rules:
 
 ```bash
 # Set up the virtual environment. skill/requirements.txt is what the deployed
-# skill needs (PyMuPDF only); the test suite and web app also need the rest.
-uv venv && uv pip install -r skill/requirements.txt pytest anthropic flask
+# skill needs (PyMuPDF only); the test suite also needs pytest.
+uv venv && uv pip install -r skill/requirements.txt pytest
 source .venv/bin/activate
 
 # Deploy the Claude Code skill (COPIES skill/ into ~/.claude/skills/jetbriefcheck/).
@@ -331,9 +331,6 @@ make test
 make package        # plugin zip (the primary artifact)
 make package-all    # plugin zip + standalone skill zip
 make version-check  # assert version.json, plugin.json and SKILL.md agree
-
-# Run the web interface
-python app.py
 
 # Or use the Claude Code skill: /jetbriefcheck <path-to-pdf>
 ```
@@ -360,6 +357,39 @@ release every 30 minutes. So a build ships when the GitHub release is
 draft or marked prerelease is skipped by the sync entirely. `make release`
 does the whole sequence.
 
+## Removed in 2.8.0: the web app and API-key path
+
+Earlier versions carried a second way to run the checker: a Flask upload page
+(`app.py`, `web/`) and a command-line mode, both of which called the Anthropic
+API with an `ANTHROPIC_API_KEY`. They were removed so that everything runs
+under a Claude subscription in Claude Code or Cowork, and so the check guidance
+exists in one place instead of being duplicated in an API prompt that had
+already begun to drift from `SKILL.md`.
+
+What went with them, and what to use instead:
+
+| Removed | What it did | Instead |
+|---|---|---|
+| Flask web app | Browser upload form, report viewer, and JSON API | The skill in Claude Code or Cowork; or, for a quick mechanical-only report without Claude, `check_brief.py` then `build_report.py` with an empty semantic file (see below) |
+| API semantic checks | `check_brief.py` without `--mechanical-only` sent the brief to the Messages API to evaluate the semantic checks | Claude evaluates them in the skill session (SKILL.md Phase 2). For unattended batch runs, drive the skill non-interactively with `claude -p` |
+| Recommendation "weighting" pass | A second API call that could escalate Accept → Correction Letter → Reject, never downgrade | Nothing — the recommendation is hard rules only, as the skill has always computed it, so the same findings always produce the same result |
+| Live API tests | Opt-in tests of the API prompt against fabricated briefs | None; the check inventory and report reconciliation are still tested offline |
+
+`check_brief.py` now always does what `--mechanical-only` did: extraction,
+concealed-text scan, classification, mechanical checks, and the intermediate
+JSON. The flag is still accepted, so older instructions keep working.
+
+A mechanical-only report, with every semantic check shown as *not determined*:
+
+```bash
+python skill/scripts/check_brief.py brief.pdf --output-dir out/
+echo '{"semantic_results": []}' > out/brief-semantic.json
+python skill/scripts/build_report.py --intermediate out/brief-intermediate.json --semantic out/brief-semantic.json
+```
+
+The recommendation's reasoning names every check that was not determined, so a
+report produced this way cannot be mistaken for a full review.
+
 ## Architecture
 
 - **`skill/`** — Deployable skill content (symlinked to `~/.claude/skills/jetbriefcheck/`):
@@ -367,7 +397,6 @@ does the whole sequence.
   - `core/` — Shared analysis engine (PDF extraction, concealed-text scan, mechanical checks, semantic checks, report builder)
   - `scripts/` — CLI scripts for the Claude Code skill workflow (`check_brief.py`, `build_report.py`, `check_rule_freshness.py`)
   - `references/` — Check definitions, rules summary, and bundled rule text
-- **`web/`** — Flask web interface (upload form, report viewer, JSON API)
 - **`deploy_skill.py`** — Cross-platform script to deploy the skill to `~/.claude/skills/`
 
 ## Skill Deployment (Claude Code CLI)
@@ -418,7 +447,7 @@ python3 skill/scripts/check_rule_freshness.py
 When a rule is flagged as stale:
 
 1. Update the bundled `.md` file in `skill/references/rules/` **and** the copy bundled inline in `skill/SKILL.md` — the zip install reads only the latter.
-2. Update any check guidance the amendment touches: `skill/SKILL.md`, `skill/references/check-definitions.md`, `skill/references/rules-summary.md`, the API-path prompt in `skill/core/checks_semantic.py`, and `skill/core/semantic_definitions.py`.
+2. Update any check guidance the amendment touches: `skill/SKILL.md`, `skill/references/check-definitions.md`, `skill/references/rules-summary.md`, and `skill/core/semantic_definitions.py`.
 3. Update `BUNDLED_EFFECTIVE_DATES` in `skill/core/version_check.py`, recompute the hashes and bump `rules_verified` in `skill/version.json`, and update the date above.
 4. Bump the version so existing installs are prompted to update, then run `python3 skill/scripts/check_rule_freshness.py` to confirm every rule reports current.
 

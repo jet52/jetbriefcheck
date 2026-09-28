@@ -1,10 +1,9 @@
 """Semantic check definitions — pure data, no third-party imports.
 
-Separated from ``checks_semantic`` so that consumers which must not depend
-on the ``anthropic`` SDK can read the inventory.  ``skill/requirements.txt``
-installs only PyMuPDF, so in a deployed skill ``import anthropic`` fails;
-``build_report.py`` needs this list to reconcile the semantic results it is
-handed against the checks that were supposed to run.
+The single inventory of semantic checks.  Claude evaluates them in the skill
+session (SKILL.md), and ``build_report.py`` uses this list to reconcile the
+semantic results it is handed against the checks that were supposed to run.
+Kept free of third-party imports: the deployed skill installs PyMuPDF only.
 
 Tuple shape: (check_id, name, rule, applicable_types, severity, description)
 where ``applicable_types`` of None means every brief type.

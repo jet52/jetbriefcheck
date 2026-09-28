@@ -1,6 +1,6 @@
 {
   "name": "jetbriefcheck",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "Check North Dakota appellate brief PDFs for compliance with the Rules of Appellate Procedure, scan each filing for concealed text, and produce a compliance report.",
   "author": {
     "name": "JET"

@@ -285,7 +285,7 @@ class TestAdvisoryFirewall:
         spec = importlib.util.spec_from_file_location("build_report", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        rec, _ = module._hard_rule_recommendation([])
+        rec, _ = module.compute_recommendation([])
         assert rec.value == "accept"
 
     def test_report_renders_the_advisory_banner(self):
