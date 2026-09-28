@@ -459,5 +459,10 @@ On a fresh clone, activate the local pre-push sensitive-content check:
 git config --local core.hooksPath .githooks
 ```
 
-It scans commits being pushed for likely ND court dockets, confidential-case
-captions, and committed binaries. Bypass once with `git push --no-verify`.
+It scans commits being pushed — to existing branches, new branches, and tags —
+for likely ND court dockets, confidential-case captions, and committed
+binaries. If it cannot read the commits being pushed (a force push over remote
+commits you have not fetched, for example), it blocks the push rather than
+passing it unscanned; fetch and retry. Known-safe strings, such as the example
+docket printed in Rule 30, go in `.sensitive-check-allow`, one regex per line.
+Bypass once with `git push --no-verify`.
