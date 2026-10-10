@@ -133,3 +133,46 @@ def test_unreadable_range_fails_closed(repo):
 def test_branch_deletion_is_ignored(repo):
     r = _hook(repo, "refs/heads/old", ZERO, _git(repo, "rev-parse", "origin/main"))
     assert r.returncode == 0
+
+
+# \b does not fire between "_" and a digit, so the original patterns passed
+# a docket joined to a filename: <docket>_<Party>-v-<Party>_Apt-Br.pdf. A
+# history scan of the public repos found real dockets that got through that
+# way. Values are assembled at runtime so this file never trips the hook;
+# sequence 9999 and county 99 do not exist.
+FAKE_SC = "".join(["2019", "9999"])
+
+
+@pytest.mark.parametrize("text", [
+    f"{FAKE_SC}_Party-v-Party_Apt-Br.pdf",
+    f"test-data/{FAKE_SC}_017_Apt-Br.pdf",
+    f"brief_{FAKE_SC}.pdf",
+])
+def test_docket_joined_by_underscore_is_caught(repo, text):
+    sha = _commit(repo, "b.txt", text + "\n")
+    r = _hook(repo, "refs/heads/feature", sha)
+    assert r.returncode == 1, r.stdout
+    assert FAKE_SC in r.stdout
+
+
+@pytest.mark.parametrize("text", [
+    "-".join(["99", "2019", "CV", "123"]),          # leading zeroes dropped
+    "-".join(["9", "2019", "CR", "00123"]),
+    "-".join(["99", "2019", "CV", "99999"]) + "_Motion.pdf",
+])
+def test_district_number_forms_are_caught(repo, text):
+    sha = _commit(repo, "b.txt", f"see {text}\n")
+    r = _hook(repo, "refs/heads/feature", sha)
+    assert r.returncode == 1, r.stdout
+
+
+@pytest.mark.parametrize("text", [
+    "".join(["1", FAKE_SC]),          # longer digit run: not a docket
+    "".join([FAKE_SC, "5"]),
+    "No. 20990001",                   # placeholder
+    "00-0000-CV-00000",               # placeholder
+])
+def test_non_dockets_still_pass(repo, text):
+    sha = _commit(repo, "b.txt", f"see {text}\n")
+    r = _hook(repo, "refs/heads/feature", sha)
+    assert r.returncode == 0, r.stdout
